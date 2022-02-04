@@ -22,7 +22,10 @@ def generatechunks(message, user=0):
 	for x in range(11):
 		tree = 0
 		if random.randint(1, 13) == 1:
-			tree = 1
+			if random.randint(1, 3) == 1:
+				tree = 2
+			else:
+				tree = 1
 		n = int(pnoise2((x + currentviewx) / freq, (x + currentviewx) / 2 / freq, 1) * 10 + 3)
 		if f"{x + 1 + currentviewx}tree" in currentgame[str(user.id)]["gamechunks"]:
 			theusefuldonothingvalue = 0
@@ -39,12 +42,17 @@ def chop(message, user=0):
 	inventory = currentgame[str(user.id)]["inventory"]
 	currentviewx = currentgame[str(user.id)]["currentviewx"]
 	tile = currentgame[str(user.id)]["gamechunks"]
-	if tile[f"{currentviewx + 5}tree"] == 1:
-		tile[f"{currentviewx + 5}tree"] = 0
-		inventory["wood"] += random.randint(10, 20)
-	elif tile[f"{currentviewx + 7}tree"] == 1:
-		tile[f"{currentviewx + 7}tree"] = 0
-		inventory["wood"] += random.randint(10, 20)
+	
+	def handle_tree(type, reward_min, reward_max):
+		if tile[f"{currentviewx + 5}tree"] == type:
+			tile[f"{currentviewx + 5}tree"] = 0
+			inventory["wood"] += random.randint(reward_min, reward_max)
+		elif tile[f"{currentviewx + 7}tree"] == type:
+			tile[f"{currentviewx + 7}tree"] = 0
+			inventory["wood"] += random.randint(reward_min, reward_max)
+	
+	handle_tree(1, 10, 20)
+	handle_tree(2, 40, 60)
 
 
 def on_floor(message, user=0):
@@ -73,7 +81,6 @@ def valid_movement(message, user=0):
 			return False
 	return True
 
-
 def render(message, user=0):
 	if user == 0:
 		user = message.author
@@ -92,11 +99,13 @@ def render(message, user=0):
 			elif y == 4 and x == 5:
 				finalmessage += ":yellow_square:"
 			# tree
-			elif tiletree == 1 and tile - currentviewy == y - 1:
+			elif tiletree == 1 and y - 1 >= tile - currentviewy >= y - 3:
 				finalmessage += ":brown_square:"
-			elif tiletree == 1 and tile - currentviewy == y - 2:
+			elif tiletree == 1 and tile - currentviewy == y - 4:
+				finalmessage += ":green_square:"
+			elif tiletree == 2 and y - 1 >= tile - currentviewy >= y - 7:
 				finalmessage += ":brown_square:"
-			elif tiletree == 1 and tile - currentviewy == y - 3:
+			elif tiletree == 2 and tile - currentviewy == y - 8:
 				finalmessage += ":green_square:"
 			# ground and sky
 			elif tile - currentviewy >= y:
@@ -116,6 +125,7 @@ async def on_ready():
 async def on_reaction_add(reaction, user):
 	message = lastmsg[str(user.id)]
 	jumped = False
+	
 	
 	if reaction.emoji == "⬅":
 		currentgame[str(user.id)]["currentviewx"] -= 1
@@ -179,12 +189,12 @@ async def on_message(message):
 	if message.content == "start game":
 		random.seed()
 		currentgame[str(message.author.id)] = {
-			"currentviewx": 0, "currentviewy": 0, "jumped": False,
+			"currentviewx": 0, "currentviewy": 0, "jumped": False, "climbing": False,
 			"inventory": {
 				"wood": 0,
 			},
 			"gamechunks": {
-				
+			
 			},
 		}
 		generatechunks(message)
