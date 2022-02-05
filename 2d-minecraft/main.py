@@ -11,10 +11,94 @@ octaves = random.random()
 freq = 50.0 * octaves
 maxheight = 10
 currentgame = {}
-lastmsg = {}
-lastbot = ""
 
+class Movement(discord.ui.Select):
+	def __init__(self):
+		options = [
+			discord.SelectOption(label='<<', description='Move the character to the left by 5 units', emoji='◀'),
+			discord.SelectOption(label='<', description='Move the character to the left by 1 units', emoji='⬅'),
+			discord.SelectOption(label='^', description='Move the character up', emoji='⬆'),
+			discord.SelectOption(label='V', description='Move the character up', emoji='⬇'),
+			discord.SelectOption(label='>', description='Move the character to the right by 1 units', emoji='➡'),
+			discord.SelectOption(label='>>', description='Move the character to the right by 5 units', emoji='▶'),
+		]
+		super().__init__(placeholder='Movement', min_values=1, max_values=1, options=options)
 
+	async def callback(self, interaction: discord.Interaction):
+		jumped = False
+		msg = interaction.message
+		user = interaction.user
+		option = self.values[0]
+		
+		#handle options
+		if option == "<<":
+			currentgame[str(user.id)]["currentviewx"] -= 5
+			if valid_movement(msg, user) == False:
+				currentgame[str(user.id)]["currentviewx"] += 5
+			await msg.edit(content=f"{render(msg, user)}")
+		elif option == "<":
+			currentgame[str(user.id)]["currentviewx"] -= 1
+			if valid_movement(msg, user) == False:
+				currentgame[str(user.id)]["currentviewx"] += 1
+			await msg.edit(content=f"{render(msg, user)}")
+		elif option == "^":
+			currentgame[str(user.id)]["jumped"] = True
+			jumped = True
+			currentgame[str(user.id)]["currentviewy"] += 1
+			if valid_movement(msg, user) == False:
+				currentgame[str(user.id)]["currentviewy"] -= 1
+			await msg.edit(content=f"{render(msg, user)}")
+		elif option == "V":
+			currentgame[str(user.id)]["jumped"] = False
+			jumped = False
+			currentgame[str(user.id)]["currentviewy"] -= 1
+			if valid_movement(msg, user) == False:
+				currentgame[str(user.id)]["currentviewy"] += 1
+			await msg.edit(content=f"{render(msg, user)}")
+		elif option == ">":
+			currentgame[str(user.id)]["currentviewx"] += 1
+			if valid_movement(msg, user) == False:
+				currentgame[str(user.id)]["currentviewx"] -= 1
+			await msg.edit(content=f"{render(msg, user)}")
+		elif option == ">>":
+			currentgame[str(user.id)]["currentviewx"] += 5
+			if valid_movement(msg, user) == False:
+				currentgame[str(user.id)]["currentviewx"] -= 5
+			await msg.edit(content=f"{render(msg, user)}")
+		#for handling the jumps
+		if currentgame[str(user.id)]["jumped"] == True and on_floor(msg, user) == False and jumped == False:
+			currentgame[str(user.id)]["currentviewy"] -= 1
+			await msg.edit(content=f"{render(msg, user)}")
+		elif on_floor(msg, user) == False and jumped == False:
+			while on_floor(msg, user) == False:
+				currentgame[str(user.id)]["currentviewy"] -= 1
+				await msg.edit(content=f"{render(msg, user)}")
+		currentgame[str(user.id)]["jumped"] = False
+		#await interaction.response.send_message(f'Action: {self.values[0]}\nUser: {str(interaction.response.author)}')
+
+class Action(discord.ui.Select):
+	def __init__(self):
+		options = [
+			discord.SelectOption(label='Chop', description='Chops down trees near the character', emoji='🪓'),
+		]
+		super().__init__(placeholder='Action', min_values=1, max_values=1, options=options)
+
+	async def callback(self, interaction: discord.Interaction):
+		msg = interaction.message
+		user = interaction.user
+		option = self.values[0]
+		
+		#handle actions
+		if option == "Chop":
+			chop(msg, user)
+			await msg.edit(content=f"{render(msg, user)}")
+
+class DropdownView(discord.ui.View):
+	def __init__(self):
+		super().__init__()
+		self.add_item(Movement())
+		self.add_item(Action())
+		
 def generatechunks(message, user=0):
 	if user == 0:
 		user = message.author
@@ -114,57 +198,8 @@ def render(message, user=0):
 				finalmessage += ":blue_square:"
 		finalmessage += "\n"
 	return finalmessage
-
-
-@client.event
-async def on_ready():
-	print(str(client.user) + ' has connected to Discord!')
-
-
-@client.event
-async def on_reaction_add(reaction, user):
-	message = lastmsg[str(user.id)]
-	jumped = False
 	
-	
-	if reaction.emoji == "⬅":
-		currentgame[str(user.id)]["currentviewx"] -= 1
-		if valid_movement(message, user) == False:
-			currentgame[str(user.id)]["currentviewx"] += 1
-		await message.edit(content=f"{render(message, user)}")
-	elif reaction.emoji == "◀":
-		currentgame[str(user.id)]["currentviewx"] -= 5
-		if valid_movement(message, user) == False:
-			currentgame[str(user.id)]["currentviewx"] += 5
-		await message.edit(content=f"{render(message, user)}")
-	elif reaction.emoji == "⬆":
-		currentgame[str(user.id)]["jumped"] = True
-		jumped = True
-		currentgame[str(user.id)]["currentviewy"] += 1
-		if valid_movement(message, user) == False:
-			currentgame[str(user.id)]["currentviewy"] -= 1
-		await message.edit(content=f"{render(message, user)}")
-	elif reaction.emoji == "⬇":
-		currentgame[str(user.id)]["jumped"] = False
-		jumped = False
-		currentgame[str(user.id)]["currentviewy"] -= 1
-		if valid_movement(message, user) == False:
-			currentgame[str(user.id)]["currentviewy"] += 1
-		await message.edit(content=f"{render(message, user)}")
-	elif reaction.emoji == "➡":
-		currentgame[str(user.id)]["currentviewx"] += 1
-		if valid_movement(message, user) == False:
-			currentgame[str(user.id)]["currentviewx"] -= 1
-		await message.edit(content=f"{render(message, user)}")
-	elif reaction.emoji == "▶":
-		currentgame[str(user.id)]["currentviewx"] += 5
-		if valid_movement(message, user) == False:
-			currentgame[str(user.id)]["currentviewx"] -= 5
-		await message.edit(content=f"{render(message, user)}")
-	elif reaction.emoji == "🪓":
-		chop(message, user)
-		await message.edit(content=f"{render(message, user)}")
-	
+async def handle_jump(message, user, jumped):
 	if currentgame[str(user.id)]["jumped"] == True and on_floor(message, user) == False and jumped == False:
 		currentgame[str(user.id)]["currentviewy"] -= 1
 		await message.edit(content=f"{render(message, user)}")
@@ -174,18 +209,14 @@ async def on_reaction_add(reaction, user):
 			await message.edit(content=f"{render(message, user)}")
 	currentgame[str(user.id)]["jumped"] = False
 
-
+@client.event
+async def on_ready():
+	print(str(client.user) + ' has connected to Discord!')
+	
 @client.event
 async def on_message(message):
-	global lastbot
 	if message.author == client.user:
-		lastbot = message
-		if message.content.startswith("X: "):
-			emojis = ["◀", "⬅", "⬆", "⬇", "➡", "▶", "🪓"]
-			for emoji in emojis:
-				await message.add_reaction(emoji)
-		else:
-			return
+		return
 	if message.content == "start game":
 		random.seed()
 		currentgame[str(message.author.id)] = {
@@ -198,10 +229,6 @@ async def on_message(message):
 			},
 		}
 		generatechunks(message)
-		
-		await message.channel.send(f"{render(message)}")
-		time.sleep(1)
-		lastmsg[str(message.author.id)] = lastbot
-
+		await message.channel.send(f"{render(message)}", view=DropdownView())
 
 client.run(TOKEN)
