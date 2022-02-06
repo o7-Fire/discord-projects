@@ -37,14 +37,14 @@ class Movement(discord.ui.Select):
 				currentgame[str(user.id)]["currentviewy"] += 1
 			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewx"] += 5
-			await msg.edit(content=f"{render(msg, user)}")
+			await msg.edit(embed=discord.Embed(description=render(msg, user)))
 		elif option == "<":
 			currentgame[str(user.id)]["currentviewx"] -= 1
 			if stepassist_allowed(msg, user):
 				currentgame[str(user.id)]["currentviewy"] += 1
 			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewx"] += 1
-			await msg.edit(content=f"{render(msg, user)}")
+			await msg.edit(embed=discord.Embed(description=render(msg, user)))
 		elif option == "^":
 			currentgame[str(user.id)]["jumped"] = True
 			jumped = True
@@ -53,7 +53,7 @@ class Movement(discord.ui.Select):
 				currentgame[str(user.id)]["currentviewy"] += 1
 			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewy"] -= 1
-			await msg.edit(content=f"{render(msg, user)}")
+			await msg.edit(embed=discord.Embed(description=render(msg, user)))
 		elif option == "V":
 			currentgame[str(user.id)]["jumped"] = False
 			jumped = False
@@ -62,29 +62,29 @@ class Movement(discord.ui.Select):
 				currentgame[str(user.id)]["currentviewy"] += 1
 			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewy"] += 1
-			await msg.edit(content=f"{render(msg, user)}")
+			await msg.edit(embed=discord.Embed(description=render(msg, user)))
 		elif option == ">":
 			currentgame[str(user.id)]["currentviewx"] += 1
 			if stepassist_allowed(msg, user):
 				currentgame[str(user.id)]["currentviewy"] += 1
 			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewx"] -= 1
-			await msg.edit(content=f"{render(msg, user)}")
+			await msg.edit(embed=discord.Embed(description=render(msg, user)))
 		elif option == ">>":
 			currentgame[str(user.id)]["currentviewx"] += 5
 			if stepassist_allowed(msg, user):
 				currentgame[str(user.id)]["currentviewy"] += 1
 			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewx"] -= 5
-			await msg.edit(content=f"{render(msg, user)}")
+			await msg.edit(embed=discord.Embed(description=render(msg, user)))
 		#for handling the jumps
 		if currentgame[str(user.id)]["jumped"] == True and on_floor(msg, user) == False and jumped == False:
 			currentgame[str(user.id)]["currentviewy"] -= 1
-			await msg.edit(content=f"{render(msg, user)}")
+			await msg.edit(embed=discord.Embed(description=render(msg, user)))
 		elif on_floor(msg, user) == False and jumped == False:
 			while on_floor(msg, user) == False:
 				currentgame[str(user.id)]["currentviewy"] -= 1
-				await msg.edit(content=f"{render(msg, user)}")
+				await msg.edit(embed=discord.Embed(description=render(msg, user)))
 		currentgame[str(user.id)]["jumped"] = False
 		#await interaction.response.send_message(f'Action: {self.values[0]}\nUser: {str(interaction.response.author)}')
 
@@ -103,7 +103,7 @@ class Action(discord.ui.Select):
 		#handle actions
 		if option == "Chop":
 			chop(msg, user)
-			await msg.edit(content=f"{render(msg, user)}")
+			await msg.edit(embed=discord.Embed(description=render(msg, user)))
 
 class DropdownView(discord.ui.View):
 	def __init__(self):
@@ -208,35 +208,27 @@ def render(message, user=0):
 			tiletree = currentgame[str(user.id)]["gamechunks"][f"{x + 1 + currentviewx}tree"]
 			# character
 			if y == 5 and x == 5:
-				finalmessage += ":brown_circle:"
+				finalmessage += "<:head:939816513853063218>"
 			elif y == 4 and x == 5:
-				finalmessage += ":yellow_square:"
+				finalmessage += "<:body:939816528277307412>"
 			# tree
 			elif tiletree == 1 and y - 1 >= tile - currentviewy >= y - 3:
-				finalmessage += ":brown_square:"
+				finalmessage += "<:L2:939809793814695947>"
 			elif tiletree == 1 and tile - currentviewy == y - 4:
-				finalmessage += ":green_square:"
+				finalmessage += "<:L1:939809848533585930>"
 			elif tiletree == 2 and y - 1 >= tile - currentviewy >= y - 7:
-				finalmessage += ":brown_square:"
+				finalmessage += "<:L2:939809793814695947>"
 			elif tiletree == 2 and tile - currentviewy == y - 8:
-				finalmessage += ":green_square:"
+				finalmessage += "<:L1:939809848533585930>"
 			# ground and sky
-			elif tile - currentviewy >= y:
-				finalmessage += ":green_square:"
+			elif tile - currentviewy == y:
+				finalmessage += "<:g_:939809738852548628>"
+			elif tile - currentviewy > y:
+				finalmessage += "<:d_:939809769462566983>"
 			else:
-				finalmessage += ":blue_square:"
+				finalmessage += "<:background:939815809117724703>"
 		finalmessage += "\n"
 	return finalmessage
-	
-async def handle_jump(message, user, jumped):
-	if currentgame[str(user.id)]["jumped"] == True and on_floor(message, user) == False and jumped == False:
-		currentgame[str(user.id)]["currentviewy"] -= 1
-		await message.edit(content=f"{render(message, user)}")
-	elif on_floor(message, user) == False and jumped == False:
-		while on_floor(message, user) == False:
-			currentgame[str(user.id)]["currentviewy"] -= 1
-			await message.edit(content=f"{render(message, user)}")
-	currentgame[str(user.id)]["jumped"] = False
 
 @client.event
 async def on_ready():
@@ -258,6 +250,7 @@ async def on_message(message):
 			},
 		}
 		generatechunks(message)
-		await message.channel.send(f"{render(message)}", view=DropdownView())
+		embed = discord.Embed(description=render(message))
+		await message.channel.send(embed=embed, view=DropdownView())
 
 client.run(TOKEN)
