@@ -3,13 +3,10 @@ from noise import pnoise2
 import random
 import time
 import math
+import os
 
 TOKEN = ""
 client = discord.Client()
-random.seed()
-octaves = random.random()
-
-freq = 50.0 * octaves
 maxheight = 10
 currentgame = {}
 
@@ -93,8 +90,10 @@ class Action(discord.ui.Select):
 	def __init__(self):
 		options = [
 			discord.SelectOption(label='Chop', description='Chops down trees near the character', emoji='🪓'),
-			discord.SelectOption(label='Inventory', description='Open inventory', emoji='🧰'),
-			discord.SelectOption(label='Game', description='View Game', emoji='🕹️'),
+			discord.SelectOption(label='Inventory', description='Open inventory page', emoji='🧰'),
+			discord.SelectOption(label='View Game', description='Open the game page', emoji='🕹️'),
+			discord.SelectOption(label='Save Game', description='Saves game to database', emoji='💾'),
+			discord.SelectOption(label='Load Game', description='Loads game from database', emoji='💾'),
 		]
 		super().__init__(placeholder='Action', min_values=1, max_values=1, options=options)
 
@@ -109,25 +108,66 @@ class Action(discord.ui.Select):
 			await msg.edit(embed=discord.Embed(description=render(msg, user, f"Picked up {amount} wood\n")))
 		elif option == "Inventory":
 			await msg.edit(embed=discord.Embed(description=render_inventory(msg, user)))
-		elif option == "Game":
+		elif option == "View Game":
 			await msg.edit(embed=discord.Embed(description=render(msg, user)))
-
+		elif option == "Save Game":
+			try:
+				save_game(msg, user)
+				await interaction.response.send_message(f"<@{interaction.user.id}> Saved game successfully!")
+			except Exception as e:
+				await interaction.response.send_message(f"<@{interaction.user.id}> Failed to save game. Error: ```{e}```")
+		elif option == "Load Game":
+			try:
+				res = load_game(msg, user)
+				if res == False:
+					await interaction.response.send_message(f"<@{interaction.user.id}> You do not have a save.")
+				else:
+					await interaction.response.send_message(f"<@{interaction.user.id}> Game loaded successfully!")
+					await msg.edit(embed=discord.Embed(description=render(msg, user)))
+			except Exception as e:
+				await interaction.response.send_message(f"<@{interaction.user.id}> Failed to load game. Error: ```{e}```")
+				
+class Mine(discord.ui.Select):
+	def __init__(self):
+		options = [
+			discord.SelectOption(label='<', description='Mine left', emoji='⬅'),
+			discord.SelectOption(label='^', description='Mine up', emoji='⬆'),
+			discord.SelectOption(label='V', description='Mine down', emoji='⬇'),
+			discord.SelectOption(label='>', description='Mine right', emoji='➡'),
+		]
+		super().__init__(placeholder='Movement', min_values=1, max_values=1, options=options)
+	
+	async def callback(self, interaction: discord.Interaction):
+		jumped = False
+		msg = interaction.message
+		user = interaction.user
+		option = self.values[0]
+		
+		# handle options
+		if option == "<":
+			theusefuldonothingvaluebecauseyoucanthaveemptyifstatements = 0
+		elif option == "^":
+			theusefuldonothingvaluebecauseyoucanthaveemptyifstatements = 0
+		elif option == "V":
+			theusefuldonothingvaluebecauseyoucanthaveemptyifstatements = 0
+		elif option == ">":
+			theusefuldonothingvaluebecauseyoucanthaveemptyifstatements = 0
+		
 class DropdownView(discord.ui.View):
 	def __init__(self):
 		super().__init__()
 		self.add_item(Movement())
 		self.add_item(Action())
-		
-def handle_number(x, y):
-	a = str(x)
-	if len(a) > y:
-		b = ""
-		for i in range(len(a)):
-			b += "9"
-		return b
-	while len(a) != y and len(a) < y:
-		a = f"0{a}"
-	return a
+		#self.add_item(Mine())
+
+def handle_number(x):
+	num = str(x)
+	if len(num) <= 4:
+		return num.zfill(4)
+	elif len(num) > 4 and len(num) < 7:
+		return f"{str(int(num) / 1000).split('.')[0].zfill(3)}K"
+	elif len(num) >= 7:
+		return f"{str(int(num) / 1000000).split('.')[0].zfill(3)}M"
 
 def generatechunks(message, user=0):
 	if user == 0:
@@ -140,6 +180,7 @@ def generatechunks(message, user=0):
 				tree = 2
 			else:
 				tree = 1
+		freq = currentgame[str(user.id)]["seed"]
 		n = int(pnoise2((x + currentviewx) / freq, (x + currentviewx) / 2 / freq, 1) * 10 + 3)
 		n2 = int(pnoise2(n / freq, (x + currentviewx) / freq, 1) * 10 + 3)
 		if f"{x + 1 + currentviewx}tree" in currentgame[str(user.id)]["gamechunks"]:
@@ -269,27 +310,96 @@ def render_inventory(message, user=0):
 	currentviewy = currentgame[str(user.id)]["currentviewy"]
 	inventory = currentgame[str(user.id)]["inventory"]
 	finalmessage = f"X: {currentviewx}\nY: {currentviewy}\nUser: {str(user)}\n"
-	def handle_item(dict, key, msg):
+	def handle_item(dict, key):
 		if key == "wood"and dict[key] != 0:
-			return f"{handle_number(dict[key], 3)} <:w_:939809931740217384>"
+			return f"{handle_number(dict[key])} <:w_:939809931740217384>"
 		elif key == "dirt" and dict[key] != 0:
-			return f"{handle_number(dict[key], 3)} <:d_:939809769462566983>"
+			return f"{handle_number(dict[key])} <:d_:939809769462566983>"
 		elif key == "stone" and dict[key] != 0:
-			return f"{handle_number(dict[key], 3)} <:s_:939809867902910524>"
+			return f"{handle_number(dict[key])} <:s_:939809867902910524>"
 	a = 1
 	for item in inventory:
 		if a != 3:
-			handled = handle_item(inventory, item, finalmessage)
+			handled = handle_item(inventory, item)
 			if handled != None:
 				finalmessage += f"{handled}"
 		else:
-			handled = handle_item(inventory, item, finalmessage)
+			handled = handle_item(inventory, item)
 			if handled != None:
 				finalmessage += f"{handled}\n"
 			a = 0
 		a += 1
 	return finalmessage
 
+def save_game(message, user=0):
+	if user == 0:
+		user = message.author
+	inventory = currentgame[str(user.id)]["inventory"]
+	gamechunks = currentgame[str(user.id)]["gamechunks"]
+	if os.path.exists(f"saves/{user.id}"):
+		thedonothingvalue = 0
+	elif os.path.exists("saves"):
+		os.mkdir(f"saves/{user.id}")
+	else:
+		os.mkdir("saves")
+		os.mkdir(f"saves/{user.id}")
+	#save general info
+	finalmessage = f"{currentgame[str(user.id)]['currentviewx']} " \
+	               f"{currentgame[str(user.id)]['currentviewy']} " \
+	               f"{currentgame[str(user.id)]['jumped']} " \
+	               f"{currentgame[str(user.id)]['climbing']} " \
+	               f"{currentgame[str(user.id)]['seed']}"
+	with open(f"./saves/{user.id}/save.txt", "w+") as f:
+		f.write(f"{finalmessage}")
+	#save inventory
+	finalmessage = ""
+	for item in inventory:
+		finalmessage += f"{inventory[item]} "
+	with open(f"./saves/{user.id}/inventory.txt", "w+") as f:
+		f.write(f"{finalmessage}")
+	#save the gamechunks
+	finalmessage = ""
+	for key in gamechunks:
+		finalmessage += f"{key} {gamechunks[key]} "
+	with open(f"./saves/{user.id}/gamechunks.txt", "w+") as f:
+		f.write(f"{finalmessage}")
+		
+def load_game(message, user=0):
+	if user == 0:
+		user = message.author
+	game = currentgame[str(user.id)]
+	inventory = game["inventory"]
+	gamechunks = game["gamechunks"]
+	if os.path.exists(f"saves/{user.id}") == False:
+		return False
+	with open(f"./saves/{user.id}/save.txt", "r") as f:
+		content = f.read().split(" ")
+		game["currentviewx"] = int(content[0])
+		game["currentviewy"] = int(content[1])
+		if content[2] == True: game["jumped"] = True
+		else: game["jumped"] = False
+		if content[3] == True: game["climbing"] = True
+		else: game["climbing"] = False
+		game["seed"] = float(content[4])
+	with open(f"./saves/{user.id}/inventory.txt", "r") as f:
+		content = f.read().split(" ")
+		a = 0
+		for item in inventory:
+			inventory[item] = int(content[a])
+			a += 1
+	with open(f"./saves/{user.id}/gamechunks.txt", "r") as f:
+		content = f.read().split(" ")
+		a = 1
+		last = ""
+		for b in content:
+			if a != 2:
+				last = b
+			else:
+				gamechunks[last] = int(b)
+				a = 0
+			last = b
+			a += 1
+			
 @client.event
 async def on_ready():
 	print(str(client.user) + ' has connected to Discord!')
@@ -298,10 +408,16 @@ async def on_ready():
 async def on_message(message):
 	if message.author == client.user:
 		return
+	if message.content.startswith("additem "):
+		item = message.content.split(" ")[1]
+		amount = message.content.split(" ")[2]
+		currentgame[str(message.author.id)]["inventory"][item] = int(amount)
 	if message.content == "start game":
 		random.seed()
+		octaves = random.random()
+		freq = 50.0 * octaves
 		currentgame[str(message.author.id)] = {
-			"currentviewx": 0, "currentviewy": 0, "jumped": False, "climbing": False,
+			"currentviewx": 0, "currentviewy": 0, "jumped": False, "climbing": False, "seed": freq,
 			"inventory": {
 				"wood": 0, "dirt": 0, "stone": 0,
 			},
