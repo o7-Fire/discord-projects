@@ -2,6 +2,7 @@ import nextcord as discord
 from noise import pnoise2
 import random
 import time
+import math
 
 TOKEN = ""
 client = discord.Client()
@@ -92,6 +93,8 @@ class Action(discord.ui.Select):
 	def __init__(self):
 		options = [
 			discord.SelectOption(label='Chop', description='Chops down trees near the character', emoji='🪓'),
+			discord.SelectOption(label='Inventory', description='Open inventory', emoji='🧰'),
+			discord.SelectOption(label='Game', description='View Game', emoji='🕹️'),
 		]
 		super().__init__(placeholder='Action', min_values=1, max_values=1, options=options)
 
@@ -102,7 +105,11 @@ class Action(discord.ui.Select):
 		
 		#handle actions
 		if option == "Chop":
-			chop(msg, user)
+			amount = chop(msg, user)
+			await msg.edit(embed=discord.Embed(description=render(msg, user, f"Picked up {amount} wood\n")))
+		elif option == "Inventory":
+			await msg.edit(embed=discord.Embed(description=render_inventory(msg, user)))
+		elif option == "Game":
 			await msg.edit(embed=discord.Embed(description=render(msg, user)))
 
 class DropdownView(discord.ui.View):
@@ -111,6 +118,17 @@ class DropdownView(discord.ui.View):
 		self.add_item(Movement())
 		self.add_item(Action())
 		
+def handle_number(x, y):
+	a = str(x)
+	if len(a) > y:
+		b = ""
+		for i in range(len(a)):
+			b += "9"
+		return b
+	while len(a) != y and len(a) < y:
+		a = f"0{a}"
+	return a
+
 def generatechunks(message, user=0):
 	if user == 0:
 		user = message.author
@@ -123,11 +141,13 @@ def generatechunks(message, user=0):
 			else:
 				tree = 1
 		n = int(pnoise2((x + currentviewx) / freq, (x + currentviewx) / 2 / freq, 1) * 10 + 3)
+		n2 = int(pnoise2(n / freq, (x + currentviewx) / freq, 1) * 10 + 3)
 		if f"{x + 1 + currentviewx}tree" in currentgame[str(user.id)]["gamechunks"]:
 			theusefuldonothingvalue = 0
 		else:
 			currentgame[str(user.id)]["gamechunks"][f"{x + 1 + currentviewx}tree"] = tree
 		currentgame[str(user.id)]["gamechunks"][f"{x + 1 + currentviewx}"] = n
+		currentgame[str(user.id)]["gamechunks"][f"{x + 1 + currentviewx}s"] = n - n2
 
 
 # def mine():
@@ -142,13 +162,22 @@ def chop(message, user=0):
 	def handle_tree(type, reward_min, reward_max):
 		if tile[f"{currentviewx + 5}tree"] == type:
 			tile[f"{currentviewx + 5}tree"] = 0
-			inventory["wood"] += random.randint(reward_min, reward_max)
+			amount = random.randint(reward_min, reward_max)
+			inventory["wood"] += amount
+			return amount
 		elif tile[f"{currentviewx + 7}tree"] == type:
 			tile[f"{currentviewx + 7}tree"] = 0
-			inventory["wood"] += random.randint(reward_min, reward_max)
+			amount = random.randint(reward_min, reward_max)
+			inventory["wood"] += amount
+			return amount
+		else:
+			return "A"
 	
-	handle_tree(1, 10, 20)
-	handle_tree(2, 40, 60)
+	val = handle_tree(1, 10, 20)
+	if val != "A": return val
+	val = handle_tree(2, 40, 60)
+	if val != "A": return val
+	return None
 
 
 def on_floor(message, user=0):
@@ -194,17 +223,18 @@ def valid_movement(message, user=0):
 			return False
 	return True
 
-def render(message, user=0):
+def render(message, user=0, additional_string=""):
 	if user == 0:
 		user = message.author
 	generatechunks(message, user)
 	inventory = currentgame[str(user.id)]["inventory"]
 	currentviewx = currentgame[str(user.id)]["currentviewx"]
 	currentviewy = currentgame[str(user.id)]["currentviewy"]
-	finalmessage = f"X: {currentviewx}\nY: {currentviewy}\nUser: {str(user)}\nInventory: {str(inventory['wood'])} wood\nOn Floor: {on_floor(message, user)}\nValid Movement: {valid_movement(message, user)}\n"
+	finalmessage = f"X: {currentviewx}\nY: {currentviewy}\nUser: {str(user)}\n{additional_string}"
 	for y in reversed(range(10)):
 		for x in range(11):
 			tile = currentgame[str(user.id)]["gamechunks"][f"{x + 1 + currentviewx}"]
+			tilestone = currentgame[str(user.id)]["gamechunks"][f"{x + 1 + currentviewx}s"]
 			tiletree = currentgame[str(user.id)]["gamechunks"][f"{x + 1 + currentviewx}tree"]
 			# character
 			if y == 5 and x == 5:
@@ -223,11 +253,41 @@ def render(message, user=0):
 			# ground and sky
 			elif tile - currentviewy == y:
 				finalmessage += "<:g_:939809738852548628>"
-			elif tile - currentviewy > y:
+			elif tile - currentviewy > y and tilestone - currentviewy < y:
 				finalmessage += "<:d_:939809769462566983>"
+			elif tilestone - currentviewy >= y:
+				finalmessage +=  "<:s_:939809867902910524>"
 			else:
 				finalmessage += "<:background:939815809117724703>"
 		finalmessage += "\n"
+	return finalmessage
+
+def render_inventory(message, user=0):
+	if user == 0:
+		user = message.author
+	currentviewx = currentgame[str(user.id)]["currentviewx"]
+	currentviewy = currentgame[str(user.id)]["currentviewy"]
+	inventory = currentgame[str(user.id)]["inventory"]
+	finalmessage = f"X: {currentviewx}\nY: {currentviewy}\nUser: {str(user)}\n"
+	def handle_item(dict, key, msg):
+		if key == "wood"and dict[key] != 0:
+			return f"{handle_number(dict[key], 3)} <:w_:939809931740217384>"
+		elif key == "dirt" and dict[key] != 0:
+			return f"{handle_number(dict[key], 3)} <:d_:939809769462566983>"
+		elif key == "stone" and dict[key] != 0:
+			return f"{handle_number(dict[key], 3)} <:s_:939809867902910524>"
+	a = 1
+	for item in inventory:
+		if a != 3:
+			handled = handle_item(inventory, item, finalmessage)
+			if handled != None:
+				finalmessage += f"{handled}"
+		else:
+			handled = handle_item(inventory, item, finalmessage)
+			if handled != None:
+				finalmessage += f"{handled}\n"
+			a = 0
+		a += 1
 	return finalmessage
 
 @client.event
@@ -243,7 +303,7 @@ async def on_message(message):
 		currentgame[str(message.author.id)] = {
 			"currentviewx": 0, "currentviewy": 0, "jumped": False, "climbing": False,
 			"inventory": {
-				"wood": 0,
+				"wood": 0, "dirt": 0, "stone": 0,
 			},
 			"gamechunks": {
 			
