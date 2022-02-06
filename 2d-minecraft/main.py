@@ -1,4 +1,4 @@
-import discord
+import nextcord as discord
 from noise import pnoise2
 import random
 import time
@@ -33,36 +33,48 @@ class Movement(discord.ui.Select):
 		#handle options
 		if option == "<<":
 			currentgame[str(user.id)]["currentviewx"] -= 5
-			if valid_movement(msg, user) == False:
+			if stepassist_allowed(msg, user):
+				currentgame[str(user.id)]["currentviewy"] += 1
+			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewx"] += 5
 			await msg.edit(content=f"{render(msg, user)}")
 		elif option == "<":
 			currentgame[str(user.id)]["currentviewx"] -= 1
-			if valid_movement(msg, user) == False:
+			if stepassist_allowed(msg, user):
+				currentgame[str(user.id)]["currentviewy"] += 1
+			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewx"] += 1
 			await msg.edit(content=f"{render(msg, user)}")
 		elif option == "^":
 			currentgame[str(user.id)]["jumped"] = True
 			jumped = True
 			currentgame[str(user.id)]["currentviewy"] += 1
-			if valid_movement(msg, user) == False:
+			if stepassist_allowed(msg, user):
+				currentgame[str(user.id)]["currentviewy"] += 1
+			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewy"] -= 1
 			await msg.edit(content=f"{render(msg, user)}")
 		elif option == "V":
 			currentgame[str(user.id)]["jumped"] = False
 			jumped = False
 			currentgame[str(user.id)]["currentviewy"] -= 1
-			if valid_movement(msg, user) == False:
+			if stepassist_allowed(msg, user):
+				currentgame[str(user.id)]["currentviewy"] += 1
+			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewy"] += 1
 			await msg.edit(content=f"{render(msg, user)}")
 		elif option == ">":
 			currentgame[str(user.id)]["currentviewx"] += 1
-			if valid_movement(msg, user) == False:
+			if stepassist_allowed(msg, user):
+				currentgame[str(user.id)]["currentviewy"] += 1
+			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewx"] -= 1
 			await msg.edit(content=f"{render(msg, user)}")
 		elif option == ">>":
 			currentgame[str(user.id)]["currentviewx"] += 5
-			if valid_movement(msg, user) == False:
+			if stepassist_allowed(msg, user):
+				currentgame[str(user.id)]["currentviewy"] += 1
+			elif valid_movement(msg, user) == False:
 				currentgame[str(user.id)]["currentviewx"] -= 5
 			await msg.edit(content=f"{render(msg, user)}")
 		#for handling the jumps
@@ -150,6 +162,23 @@ def on_floor(message, user=0):
 			return False
 	return True
 
+def stepassist_allowed(message, user=0):
+	a = 0
+	if user == 0:
+		user = message.author
+	generatechunks(message, user)
+	currentviewx = currentgame[str(user.id)]["currentviewx"]
+	currentviewy = currentgame[str(user.id)]["currentviewy"]
+	for x in range(11):
+		tile = currentgame[str(user.id)]["gamechunks"][f"{x + 1 + currentviewx}"]
+		if tile - currentviewy == 5 and x == 5:
+			a += 1
+		elif tile - currentviewy == 4 and x == 5:
+			a += 1
+	if a == 1:
+		return True
+	else:
+		return False
 
 def valid_movement(message, user=0):
 	if user == 0:
