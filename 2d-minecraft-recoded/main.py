@@ -5,7 +5,8 @@ import time
 import math
 import os
 
-TOKEN = ""
+TOKEN = "OTIwMzA3NTA4MzY1NjM1NjA2.YbidKA.BjgjKwf5cvv5hH8OE5apVXDuXEI" #bot 1
+#TOKEN = "ODk0ODEyMTc1MzI2MTM0MzUy.YVvcxw.P7c61HdVD-2VG0Igz5UdgV0Q28Y" #my bot
 client = discord.Client()
 currentgame = {}
 
@@ -60,31 +61,30 @@ def generatechunks(message, user=0):
     noise2 = PerlinNoise(octaves=6, seed=seed)
     noise3 = PerlinNoise(octaves=12, seed=seed)
     noise4 = PerlinNoise(octaves=24, seed=seed)
-    for x in range(14): #3 extra range
-        for y in range(13):
+    for x in range(11): #3 extra range
+        for y in range(10):
             plrx = currentgame[str(user.id)]["Position"]["x"]
-            plry = currentgame[str(user.id)]["Position"]["y"] - 4
-            tx = currentgame[str(user.id)]["Position"]["x"] + x - 8
-            ty = currentgame[str(user.id)]["Position"]["y"] + y - 7
+            plry = currentgame[str(user.id)]["Position"]["y"]
+            tx = currentgame[str(user.id)]["Position"]["x"] + x - 5
+            ty = currentgame[str(user.id)]["Position"]["y"] + y - 4
             do = True
-            if plrx == x and plry == y:
+            if plrx == tx and plry == ty:
                 currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "head"
                 do = False
-            elif plrx == x and plry == y - 1:
+            elif plrx == tx and plry == ty + 1:
                 currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "body"
                 do = False
             
             if do:
-                if not f"{str(tx)}X{str(ty)}" in currentgame[str(user.id)]["gamechunks"]:
-                    thenoise = noise([x / 14, y / 13]) * 100
-                    thenoise += 0.5 * noise2([x / 14, y / 13]) * 100
-                    thenoise += 0.25 * noise3([x / 14, y / 13]) * 100
-                    thenoise += 0.125 * noise4([x / 14, y / 13]) * 100
-                    noises.append(thenoise)
-                    if thenoise > -10:
-                        currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
-                    elif thenoise < -10:
-                        currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "sky"
+                thenoise = noise([tx / 14, ty / 13]) * 100
+                thenoise += 0.5 * noise2([tx / 14, ty / 13]) * 100
+                thenoise += 0.25 * noise3([tx / 14, ty / 13]) * 100
+                thenoise += 0.125 * noise4([tx / 14, ty / 13]) * 100
+                noises.append(thenoise)
+                if thenoise > -10:
+                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
+                elif thenoise < -10:
+                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "sky"
                 
                 """
                 if 5 < thenoise < 10:
