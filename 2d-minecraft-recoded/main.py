@@ -5,8 +5,7 @@ import time
 import math
 import os
 
-TOKEN = "OTIwMzA3NTA4MzY1NjM1NjA2.YbidKA.BjgjKwf5cvv5hH8OE5apVXDuXEI" #bot 1
-#TOKEN = "ODk0ODEyMTc1MzI2MTM0MzUy.YVvcxw.P7c61HdVD-2VG0Igz5UdgV0Q28Y" #my bot
+TOKEN = ""
 client = discord.Client()
 currentgame = {}
 
