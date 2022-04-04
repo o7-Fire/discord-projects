@@ -76,24 +76,30 @@ class DropdownView(discord.ui.View):
         self.add_item(Movement())
 
 def valid_movement(message, user=0): #checks if sky is on player
-    if user == 0:
-        user = message.author
-    plrx = currentgame[str(user.id)]["Position"]["x"]
-    plry = currentgame[str(user.id)]["Position"]["y"]
-    if currentgame[str(user.id)]["gamechunks"][f"{str(plrx)}X{str(plry)}"] == "sky" and currentgame[str(user.id)]["gamechunks"][f"{str(plrx)}X{str(plry + 1)}"] == "sky":
+    if currentgame[str(user.id)]["cheats"]["noclip"]:
         return True
     else:
-        return False
+        if user == 0:
+            user = message.author
+        plrx = currentgame[str(user.id)]["Position"]["x"]
+        plry = currentgame[str(user.id)]["Position"]["y"]
+        if currentgame[str(user.id)]["gamechunks"][f"{str(plrx)}X{str(plry)}"] == "sky" and currentgame[str(user.id)]["gamechunks"][f"{str(plrx)}X{str(plry + 1)}"] == "sky":
+            return True
+        else:
+            return False
     
 def on_floor(message, user=0): #checks whats below player, then return false if it is sky
-    if user == 0:
-        user = message.author
-    plrx = currentgame[str(user.id)]["Position"]["x"]
-    plry = currentgame[str(user.id)]["Position"]["y"]
-    if currentgame[str(user.id)]["gamechunks"][f"{str(plrx)}X{str(plry - 2)}"] == "sky":
-        return False
-    else:
+    if currentgame[str(user.id)]["cheats"]["noclip"]:
         return True
+    else:
+        if user == 0:
+            user = message.author
+        plrx = currentgame[str(user.id)]["Position"]["x"]
+        plry = currentgame[str(user.id)]["Position"]["y"]
+        if currentgame[str(user.id)]["gamechunks"][f"{str(plrx)}X{str(plry - 2)}"] == "sky":
+            return False
+        else:
+            return True
 
 def generatechunks(message, user=0):
     if user == 0:
@@ -110,7 +116,18 @@ def generatechunks(message, user=0):
             plry = currentgame[str(user.id)]["Position"]["y"]
             tx = plrx + x - 25
             ty = plry + y - 25
-            if ty <= -10:
+            
+            freq = currentgame[str(user.id)]["seed"]
+            thenoise = int(pnoise2(tx / freq / 4, ty / freq / 4) * 75) + 5
+            if ty > thenoise:
+                currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "sky"
+            elif thenoise-5 < ty < thenoise:
+                currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "dirt"
+            elif ty == thenoise:
+                currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "grass"
+            elif thenoise - 12 < ty < thenoise - 5:
+                currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
+            else:
                 if not f"{str(tx)}X{str(ty)}" in currentgame[str(user.id)]["gamechunks"]:
                     thenoise = noise([tx / 11, ty / 10]) * 100
                     thenoise += 0.5 * noise2([tx / 11, ty / 10]) * 100
@@ -125,17 +142,6 @@ def generatechunks(message, user=0):
                     elif thenoise < -10:
                         currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "sky"
         
-            else:
-                freq = currentgame[str(user.id)]["seed"]
-                thenoise = int(pnoise2(tx/freq / 4, ty/freq / 4) * 75) + 5
-                if ty > thenoise:
-                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "sky"
-                elif ty < thenoise:
-                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "dirt"
-                elif ty == thenoise:
-                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "grass"
-                elif 0 < ty < 10:
-                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
         
     """
     lastsmallnoise = 0
@@ -153,10 +159,11 @@ def render(message, user=0):
     if user == 0:
         user = message.author
     generatechunks(message, user)
-    finalmessage = f"Game user: {str(user)}\nOn floor: {str(on_floor(message, user))}\nValid movement: {str(valid_movement(message, user))}\n"
+    finalmessage = f"Game user: {str(user)}\nOn floor: {str(on_floor(message, user))}\nValid movement: {str(valid_movement(message, user))}\n" \
+                   f"Noclip: {str(currentgame[str(user.id)]['cheats']['noclip'])}\n"
     
-    playerpos = False
-    debugfinalmessage = ""
+    #playerpos = False #debug
+    #debugfinalmessage = "" #debug
     for y in reversed(range(10)):
         for x in range(11):
             plrx = currentgame[str(user.id)]["Position"]["x"]
@@ -164,9 +171,9 @@ def render(message, user=0):
             tx = plrx + x - 5
             ty = plry + y - 4
             #--- debug
-            debugfinalmessage += f"({str(tx)}, {str(ty)}) "
-            if playerpos == False:
-                playerpos = f"{str(plrx)}, {str(plry)} head\n{str(plrx)}, {str(plry - 1)} body"
+            #debugfinalmessage += f"({str(tx)}, {str(ty)}) "
+            #if playerpos == False:
+            #    playerpos = f"{str(plrx)}, {str(plry)} head\n{str(plrx)}, {str(plry - 1)} body"
             #---
             tile = currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"]
             do = True
@@ -190,8 +197,8 @@ def render(message, user=0):
                     case "iron":
                         finalmessage += "<:i1:960482977559748608>"
         finalmessage += "\n"
-        debugfinalmessage += "\n"
-    print(f"{debugfinalmessage}\n\n{playerpos}")
+        #debugfinalmessage += "\n" #debug
+    #print(f"{debugfinalmessage}\n\n{playerpos}") #debug
     return finalmessage
 
 @client.event
@@ -202,10 +209,17 @@ async def on_ready():
 async def on_message(message):
     if message.author == client.user:
         return
+    if message.content == "noclip":
+        if currentgame[str(message.author.id)]["cheats"]["noclip"]:
+            currentgame[str(message.author.id)]["cheats"]["noclip"] = False
+        else:
+            currentgame[str(message.author.id)]["cheats"]["noclip"] = True
+        await message.channel.send("Done!")
     if "setpos " in message.content:
         args = message.content.split(" ")
         currentgame[str(message.author.id)]["Position"]["x"] = int(args[1])
         currentgame[str(message.author.id)]["Position"]["y"] = int(args[2])
+        render(message)
         await message.channel.send("Done!")
     if message.content == "start game2":
         random.seed()
@@ -221,6 +235,9 @@ async def on_message(message):
             },
             "gamechunks": {
             
+            },
+            "cheats": {
+                "noclip":False,
             }
         }
         embed = discord.Embed(description=render(message))
