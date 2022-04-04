@@ -1,5 +1,6 @@
 import nextcord as discord
 from perlin_noise import PerlinNoise
+from noise import pnoise2
 import random
 import time
 import math
@@ -60,41 +61,42 @@ def generatechunks(message, user=0):
     noise2 = PerlinNoise(octaves=6, seed=seed)
     noise3 = PerlinNoise(octaves=12, seed=seed)
     noise4 = PerlinNoise(octaves=24, seed=seed)
-    for x in range(11): #3 extra range
-        for y in range(10):
+    for x in range(15): #generate caves
+        for y in range(15):
             plrx = currentgame[str(user.id)]["Position"]["x"]
             plry = currentgame[str(user.id)]["Position"]["y"]
-            tx = currentgame[str(user.id)]["Position"]["x"] + x - 5
-            ty = currentgame[str(user.id)]["Position"]["y"] + y - 4
-            do = True
-            if plrx == tx and plry == ty:
-                currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "head"
-                do = False
-            elif plrx == tx and plry == ty + 1:
-                currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "body"
-                do = False
-            
-            if do:
-                thenoise = noise([tx / 14, ty / 13]) * 100
-                thenoise += 0.5 * noise2([tx / 14, ty / 13]) * 100
-                thenoise += 0.25 * noise3([tx / 14, ty / 13]) * 100
-                thenoise += 0.125 * noise4([tx / 14, ty / 13]) * 100
+            tx = currentgame[str(user.id)]["Position"]["x"] + x - 7
+            ty = currentgame[str(user.id)]["Position"]["y"] + y - 7
+
+            if not f"{str(tx)}X{str(ty)}" in currentgame[str(user.id)]["gamechunks"]:
+                thenoise = noise([tx / 11, ty / 10]) * 100
+                thenoise += 0.5 * noise2([tx / 11, ty / 10]) * 100
+                thenoise += 0.25 * noise3([tx / 11, ty / 10]) * 100
+                thenoise += 0.125 * noise4([tx / 11, ty / 10]) * 100
                 noises.append(thenoise)
                 if thenoise > -10:
-                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
+                    if random.randint(1, 50) == 1:
+                        currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "iron"
+                    else:
+                        currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
                 elif thenoise < -10:
                     currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "sky"
-                
-                """
-                if 5 < thenoise < 10:
-                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "grass"
-                elif 10 < thenoise < 20:
-                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "dirt"
-                elif 20 < thenoise < 30:
-                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
+        """
+        if ty > 0:
+            freq = currentgame[str(user.id)]["seed"]
+            thenoise = (pnoise2(tx / (freq * 4), freq) * 75) + 6
+
+            #print(thenoise)
+            #currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty + int(thenoise))}"] = "grass"
+            do = True
+            xf = ty + int(thenoise) - 1
+            while do:
+                if not f"{str(tx)}X{str(xf)}" in currentgame[str(user.id)]["gamechunks"]:
+                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(xf)}"] = "dirt"
                 else:
-                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "sky"
-                """
+                    do = False
+        """
+        
     lastsmallnoise = 0
     lastbignoise = 0
     for n in noises:
@@ -104,7 +106,7 @@ def generatechunks(message, user=0):
             lastsmallnoise = n
     print("lowest noise", lastsmallnoise)
     print("highest noise", lastbignoise)
-    
+        
 def render(message, user=0):
     if user == 0:
         user = message.author
@@ -112,21 +114,31 @@ def render(message, user=0):
     finalmessage = f"Game user: {str(user)}\n"
     for y in reversed(range(10)):
         for x in range(11):
+            plrx = currentgame[str(user.id)]["Position"]["x"]
+            plry = currentgame[str(user.id)]["Position"]["y"]
             tx = currentgame[str(user.id)]["Position"]["x"] + x - 5
             ty = currentgame[str(user.id)]["Position"]["y"] + y - 4
             tile = currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"]
-            if tile == "head":
-                finalmessage += "<:head:939816513853063218>"
-            elif tile == "body":
-                finalmessage += "<:body:939816528277307412>"
-            elif tile == "grass":
-                finalmessage += "<:g_:939809738852548628>"
-            elif tile == "dirt":
-                finalmessage += "<:d_:939809769462566983>"
-            elif tile == "stone":
-                finalmessage += "<:s_:939809867902910524>"
-            elif tile == "sky":
-                finalmessage += "<:background:939815809117724703>"
+            do = True
+            if plrx == tx and plry == ty:
+                finalmessage += "<:h1:939816513853063218>"
+                do = False
+            elif plrx == tx and plry == ty + 1:
+                finalmessage += "<:b1:939816528277307412>"
+                do = False
+                
+            if do:
+                match tile:
+                    case "grass":
+                        finalmessage += "<:g_:939809738852548628>"
+                    case "dirt":
+                        finalmessage += "<:d_:939809769462566983>"
+                    case "stone":
+                        finalmessage += "<:s_:939809867902910524>"
+                    case "sky":
+                        finalmessage += "<:b2:939815809117724703>"
+                    case "iron":
+                        finalmessage += "<:i1:960482977559748608>"
         finalmessage += "\n"
     return finalmessage
 
