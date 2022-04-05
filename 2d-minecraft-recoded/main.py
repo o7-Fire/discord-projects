@@ -134,8 +134,11 @@ def generatechunks(message, user=0):
                     currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "dirt"
                 elif ty == thenoise:
                     currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "grass"
-                    if random.randint(1, 20) == 1:
-                        generate_models("oaktree", message, user, tx-2, ty+1)
+                    if random.randint(1, 12) == 1:
+                        if random.randint(1, 3) == 1:
+                            generate_models("largeoaktree", message, user, tx-4, ty)
+                        else:
+                            generate_models("oaktree", message, user, tx - 2, ty + 1)
                 elif thenoise - 12 < ty < thenoise - 5:
                     currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
                 else:
