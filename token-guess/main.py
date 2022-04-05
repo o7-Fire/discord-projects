@@ -43,7 +43,7 @@ async def validateToken(token):
 
 
 def validateWrapper(args):
-    asyncio.run(validateToken(args))
+    return asyncio.run(validateToken(args))
 
 
 async def goooooooo():
@@ -55,13 +55,14 @@ async def goooooooo():
         futures.append(executor.submit(validateWrapper, combos))
 
     with tqdm(total=totalCombos) as pbar:
-        while True:
             for future in concurrent.futures.as_completed(futures):
                 try:
                     data = future.result()
                     if data:
-                        print(f'{data} is a valid token!')
+                        pbar.update(totalCombos - pbar.n)
+                        pbar.close()
                         sys.exit(0)
+
                 except:
                     pass
                 pbar.update(1)
