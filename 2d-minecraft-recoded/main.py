@@ -101,6 +101,14 @@ def on_floor(message, user=0): #checks whats below player, then return false if 
         else:
             return True
 
+def generate_models(modelname, message, user, x, y):
+    with open(f"./models/{modelname}.txt", "r") as f:
+        data = f.read().split("\n")
+    for tile in data:
+        data2 = tile.split(" ")
+        if data2[2] != "air":
+            currentgame[str(user.id)]["gamechunks"][f"{str(x + int(data2[0]))}X{str(y + int(data2[1]))}"] = data2[2]
+            
 def generatechunks(message, user=0):
     if user == 0:
         user = message.author
@@ -116,19 +124,21 @@ def generatechunks(message, user=0):
             plry = currentgame[str(user.id)]["Position"]["y"]
             tx = plrx + x - 25
             ty = plry + y - 25
-            
-            freq = currentgame[str(user.id)]["seed"]
-            thenoise = int(pnoise2(tx / freq / 4, ty / freq / 4) * 75) + 5
-            if ty > thenoise:
-                currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "sky"
-            elif thenoise-5 < ty < thenoise:
-                currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "dirt"
-            elif ty == thenoise:
-                currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "grass"
-            elif thenoise - 12 < ty < thenoise - 5:
-                currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
-            else:
-                if not f"{str(tx)}X{str(ty)}" in currentgame[str(user.id)]["gamechunks"]:
+
+            if not f"{str(tx)}X{str(ty)}" in currentgame[str(user.id)]["gamechunks"]:
+                freq = currentgame[str(user.id)]["seed"]
+                thenoise = int(pnoise2(tx / freq / 4, ty / freq / 4) * 75) + 5
+                if ty > thenoise:
+                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "sky"
+                elif thenoise-5 < ty < thenoise:
+                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "dirt"
+                elif ty == thenoise:
+                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "grass"
+                    if random.randint(1, 20) == 1:
+                        generate_models("oaktree", message, user, tx-2, ty+1)
+                elif thenoise - 12 < ty < thenoise - 5:
+                    currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
+                else:
                     thenoise = noise([tx / 11, ty / 10]) * 100
                     thenoise += 0.5 * noise2([tx / 11, ty / 10]) * 100
                     thenoise += 0.25 * noise3([tx / 11, ty / 10]) * 100
@@ -162,8 +172,8 @@ def render(message, user=0):
     finalmessage = f"Game user: {str(user)}\nOn floor: {str(on_floor(message, user))}\nValid movement: {str(valid_movement(message, user))}\n" \
                    f"Noclip: {str(currentgame[str(user.id)]['cheats']['noclip'])}\n"
     
-    #playerpos = False #debug
-    #debugfinalmessage = "" #debug
+    playerpos = False #debug
+    debugfinalmessage = "" #debug
     for y in reversed(range(10)):
         for x in range(11):
             plrx = currentgame[str(user.id)]["Position"]["x"]
@@ -171,9 +181,9 @@ def render(message, user=0):
             tx = plrx + x - 5
             ty = plry + y - 4
             #--- debug
-            #debugfinalmessage += f"({str(tx)}, {str(ty)}) "
-            #if playerpos == False:
-            #    playerpos = f"{str(plrx)}, {str(plry)} head\n{str(plrx)}, {str(plry - 1)} body"
+            debugfinalmessage += f"({str(tx)}, {str(ty)}) "
+            if playerpos == False:
+                playerpos = f"{str(plrx)}, {str(plry)} head\n{str(plrx)}, {str(plry - 1)} body"
             #---
             tile = currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"]
             do = True
@@ -196,9 +206,13 @@ def render(message, user=0):
                         finalmessage += "<:b2:939815809117724703>"
                     case "iron":
                         finalmessage += "<:i1:960482977559748608>"
+                    case "oaklog":
+                        finalmessage += "<:wl1:960812648113504270>"
+                    case "oakleaf":
+                        finalmessage += "<:wl11:960812925340233758>"
         finalmessage += "\n"
-        #debugfinalmessage += "\n" #debug
-    #print(f"{debugfinalmessage}\n\n{playerpos}") #debug
+        debugfinalmessage += "\n" #debug
+    print(f"{debugfinalmessage}\n\n{playerpos}") #debug
     return finalmessage
 
 @client.event
@@ -228,7 +242,7 @@ async def on_message(message):
         currentgame[str(message.author.id)] = {
             "seed": freq,
             "Position": {
-                "x":0, "y":15
+                "x":0, "y":5
             },
             "inventory": {
                 "wood": 0, "dirt": 0, "stone": 0,
