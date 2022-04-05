@@ -1,4 +1,5 @@
 import concurrent.futures
+import sys
 
 HOWLONGATOKENIS = 59
 CurrentToken = input("Enter your token: ")
@@ -34,6 +35,7 @@ async def validateToken(token):
         data = await client.http.static_login(token.strip(), bot=True)
         print("\n")
         print(f'{token} is a valid token!, username: {data["username"]}#{data["discriminator"]}')
+        await client.close()
         return token
     except:
         pass
@@ -58,10 +60,7 @@ async def goooooooo():
                 try:
                     data = future.result()
                     if data:
-                        print(data)
-                        print("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
-                        print("\n")
-                        break
+                        sys.exit(0)
                 except Exception as e:
                     pass
             await asyncio.sleep(0.1)
