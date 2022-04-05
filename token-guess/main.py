@@ -60,8 +60,9 @@ async def goooooooo():
                 try:
                     data = future.result()
                     if data:
+                        print(f'{data} is a valid token!')
                         sys.exit(0)
-                except Exception as e:
+                except:
                     pass
                 pbar.update(1)
             await asyncio.sleep(0.1)
