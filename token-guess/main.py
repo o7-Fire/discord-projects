@@ -63,6 +63,7 @@ async def goooooooo():
                         sys.exit(0)
                 except Exception as e:
                     pass
+                pbar.update(1)
             await asyncio.sleep(0.1)
 
 
