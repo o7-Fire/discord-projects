@@ -10,11 +10,29 @@ TOKEN = ""
 client = discord.Client()
 currentgame = {}
 block_index = {}
+item_index = {}
+
+with open("./asset/itemindex.txt", "r") as f:
+    t = f.read().split("\n")
+    for item in t:
+        tt = item.split(" ")
+        item_index[tt[0]] = {
+            "name": tt[1].replace("_", " ")
+        }
 with open("./asset/blockindex.txt", "r") as f:
     t = f.read().split("\n")
     for block in t:
         tt = block.split(" ")
-        block_index[tt[0]] = tt[1]
+        block_index[tt[0]] = {
+            "name": tt[1].replace("_", " "),
+            "drops": {
+            
+            }
+        }
+        for drop in tt[2].split(","):
+            dropdata = drop.split("_")
+            block_index[tt[0]]["drops"][dropdata[1]] = int(dropdata[0])
+#print(block_index)
     
 class Movement(discord.ui.Select):
     def __init__(self):
@@ -93,13 +111,31 @@ class Mine(discord.ui.Select):
         msg = interaction.message
         user = interaction.user
         option = self.values[0]
+        extramessagetosay = ""
         
         async def randomfunctionformining(x, y):
+            global extramessagetosay
             plrx = currentgame[str(user.id)]["Position"]["x"]
             plry = currentgame[str(user.id)]["Position"]["y"]
             thetilename = currentgame[str(user.id)]["gamechunks"][f"{str(plrx + x)}X{str(plry + y)}"]
             currentgame[str(user.id)]["gamechunks"][f"{str(plrx + x)}X{str(plry + y)}"] = "sky"
-            await msg.edit(embed=discord.Embed(description=render(msg, user, f"Mined {block_index[thetilename].replace('_', ' ')}")))
+            
+            blockindextile = block_index[thetilename]
+            dotheblock = True
+            for block in blockindextile["drops"]:
+                if dotheblock:
+                    amount = 1
+                    if blockindextile["drops"][block] != 100:
+                        if random.randint(1, 100) == blockindextile["drops"][block]:
+                            if block in block_index: extramessagetosay = f"Mined {str(amount)} {block_index[block]['name']}!"
+                            else: extramessagetosay = f"Mined {str(amount)} {item_index[block]['name']}!"
+                            add_item(msg, user, block, amount)
+                            dotheblock = False
+                    else: #im sorry for your eyes
+                        if block in block_index: extramessagetosay = f"Mined {str(amount)} {block_index[block]['name']}!"
+                        else: extramessagetosay = f"Mined {str(amount)} {item_index[block]['name']}!"
+                        add_item(msg, user, block, amount)
+            await msg.edit(embed=discord.Embed(description=render(msg, user, extramessagetosay)))
         # handle options
         if option == "<^":
             await randomfunctionformining(-1, 0)
@@ -121,15 +157,15 @@ class Mine(discord.ui.Select):
                     do = False
                 else:
                     currentgame[str(user.id)]["Position"]["y"] -= 1
-                    await msg.edit(embed=discord.Embed(description=render(msg, user)))
+                    await msg.edit(embed=discord.Embed(description=render(msg, user, extramessagetosay)))
 
 class Action(discord.ui.Select):
     def __init__(self):
         options = [
             discord.SelectOption(label='Inventory', description='Open inventory page', emoji='🧰'),
-            discord.SelectOption(label='View Game', description='Open the game page', emoji='🕹️'),
-            discord.SelectOption(label='Save Game', description='Saves game to database', emoji='💾'),
-            discord.SelectOption(label='Load Game', description='Loads game from database', emoji='💾'),
+            #discord.SelectOption(label='View Game', description='Open the game page', emoji='🕹️'),
+            #discord.SelectOption(label='Save Game', description='Saves game to database', emoji='💾'),
+            #discord.SelectOption(label='Load Game', description='Loads game from database', emoji='💾'),
         ]
         super().__init__(placeholder='Action', min_values=1, max_values=1, options=options)
     
@@ -139,8 +175,8 @@ class Action(discord.ui.Select):
         option = self.values[0]
 
         # handle actions
-        #if option == "Inventory":
-        #    await msg.edit(embed=discord.Embed(description=render_inventory(msg, user)))
+        if option == "Inventory":
+            await msg.edit(embed=discord.Embed(description=render_inventory(msg, user)))
         """
         if option == "View Game":
             await msg.edit(embed=discord.Embed(description=render(msg, user)))
@@ -169,7 +205,7 @@ class DropdownView(discord.ui.View):
         super().__init__()
         self.add_item(Movement())
         self.add_item(Mine())
-        #self.add_item(Action())
+        self.add_item(Action())
 
 def valid_movement(message, user=0): #checks if sky is on player
     if currentgame[str(user.id)]["cheats"]["noclip"]:
@@ -197,6 +233,12 @@ def on_floor(message, user=0): #checks whats below player, then return false if 
         else:
             return True
 
+def add_item(message, user, itemname, amount):
+    if itemname in currentgame[str(user.id)]["inventory"]:
+        currentgame[str(user.id)]["inventory"][itemname] = currentgame[str(user.id)]["inventory"][itemname] + amount
+    else:
+        currentgame[str(user.id)]["inventory"][itemname] = amount
+    
 def generate_models(modelname, message, user, x, y):
     with open(f"./models/{modelname}.txt", "r") as f:
         data = f.read().split("\n")
@@ -204,7 +246,17 @@ def generate_models(modelname, message, user, x, y):
         data2 = tile.split(" ")
         if data2[2] != "air":
             currentgame[str(user.id)]["gamechunks"][f"{str(x + int(data2[0]))}X{str(y + int(data2[1]))}"] = data2[2]
-            
+   
+def render_inventory(message, user=0, additional_message=""):
+    if user == 0:
+        user = message.author
+    finalmessage = f"Game user: {str(user)}\n{additional_message}\n"
+    inventory = currentgame[str(user.id)]["inventory"]
+    for item in inventory:
+        finalmessage += f", {str(inventory[item])} {item}"
+    finalmessage = finalmessage.replace(", ", "", 1)
+    return finalmessage
+
 def generatechunks(message, user=0):
     if user == 0:
         user = message.author
@@ -345,7 +397,7 @@ async def on_message(message):
                 "x":0, "y":5
             },
             "inventory": {
-                "wood": 0, "dirt": 0, "stone": 0,
+
             },
             "gamechunks": {
             
