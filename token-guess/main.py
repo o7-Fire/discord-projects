@@ -55,18 +55,18 @@ async def goooooooo():
         futures.append(executor.submit(validateWrapper, combos))
 
     with tqdm(total=totalCombos) as pbar:
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    data = future.result()
-                    if data:
-                        pbar.update(totalCombos - pbar.n)
-                        pbar.close()
-                        sys.exit(0)
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                data = future.result()
+                if data:
+                    pbar.update(totalCombos - pbar.n)
+                    pbar.close()
+                    sys.exit(0)
 
-                except:
-                    pass
-                pbar.update(1)
-            await asyncio.sleep(0.1)
+            except:
+                pass
+            pbar.update(1)
+        await asyncio.sleep(0.1)
 
 
 asyncio.get_event_loop().run_until_complete(goooooooo())
