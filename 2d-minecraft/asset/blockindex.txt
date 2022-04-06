@@ -1,6 +1,9 @@
-dirt dirt
-stone stone
-grassblock grass_block
-ironore iron_ore
-oaklog oak_log
-oakleaf oak_leaves
+dirt dirt 100_dirt
+cobblestone cobblestone 100_cobblestone
+stone stone 100_cobblestone
+grassblock grass_block 100_dirt
+ironore iron_ore 100_ironore
+oaklog oak_log 100_oaklog
+oakplanks oak_planks 100_oakplanks
+oaksapling oak_sapling 100_oak_sapling
+oakleaf oak_leaves 5_stick,5_oaksapling
