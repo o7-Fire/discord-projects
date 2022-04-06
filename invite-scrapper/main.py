@@ -1,3 +1,4 @@
+import json
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Queue
 
@@ -44,9 +45,16 @@ print("Header sample")
 for eeeeeeeeeeeee in range(3):
     print(header.generate())
 
+lastFetchProxy1Time = 0
+lastFetchProxy1 = []
 
-def fetchProxy(secure=True):
-    url = "https://api.proxyscrape.com/?request=getproxies&proxytype=https&timeout=1000&country=all&ssl=yes"
+
+def fetchProxy1(secure=True):
+    global lastFetchProxy1Time, lastFetchProxy1
+    if time.time() - lastFetchProxy1Time < 60:
+        return lastFetchProxy1
+
+    url = "https://api.proxyscrape.com/?request=getproxies&proxytype=https&timeout=2000&country=all&ssl=yes"
     if not secure:
         url = url.replace("https", "http")
     response = requests.get(url)
@@ -60,18 +68,46 @@ def fetchProxy(secure=True):
         else:
             i = "http://" + i
             listDict.append({"http": i})
+    lastFetchProxy1Time = time.time()
+    lastFetchProxy1 = listDict
+    print(f"Fetched {len(listDict)} proxies")
     return listDict
+
+
+lastFetchProxy2Time = 0
+lastFetchProxy2 = []
+
+
+def fetchProxy2():
+    global lastFetchProxy2Time, lastFetchProxy2
+    if time.time() - lastFetchProxy2Time < 60:
+        return lastFetchProxy2
+    lastFetchProxy2Time = time.time()
+    url = "https://proxylist.geonode.com/api/proxy-list?limit=50&page=1&sort_by=lastChecked&sort_type=desc&speed=fast&protocols=http%2Chttps"
+    response = requests.get(url)
+    data = json.loads(response.text)
+    lastFetchProxy2 = []
+    for dat in data["data"]:
+        da = {}
+        for protocol in dat["protocols"]:
+            da[protocol] = protocol + "://" + dat["ip"] + ":" + str(dat["port"])
+        lastFetchProxy2.append(da)
+    print(f"Fetched {len(lastFetchProxy2)} proxies")
+    return lastFetchProxy2
+
+
+def fetchProxy():
+    l = [fetchProxy1(), fetchProxy2()]
+    return l
 
 
 def do(name=0, rangeStart=0, rangeEnd=1):
     print(f'Thread {name} started with range {rangeStart} to {rangeEnd}')
     proxies = fetchProxy()
-    print(f'Thread {name} fetched {len(proxies)} proxies')
+
     for i in range(rangeStart, rangeEnd):
         try:
-            if i % len(proxies) == 0:
-                proxies = fetchProxy()
-                print(f'Thread {name} fetched {len(proxies)} proxies')
+
             url = nextInvite()
             proxy = random.choice(proxies)
             response = requests.get(url, headers=header.generate(), timeout=2000, proxies=proxy)
@@ -85,14 +121,14 @@ def do(name=0, rangeStart=0, rangeEnd=1):
             elif response.status_code != 404:
                 print(f'{url} returned {response.status_code}')
         except Exception as e:
-            #print(e)
-            #time.sleep(1)
+            # print(e)
+            # time.sleep(1)
             continue
     print(f'Thread {name} finished')
 
 
 def main():
-    workerCount = 10
+    workerCount = 100
     eachWorker = possibleCombination // workerCount
     print("Possible Combinations: " + str(possibleCombination))
     print("Workers: " + str(workerCount))
