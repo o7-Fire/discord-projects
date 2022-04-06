@@ -41,17 +41,41 @@ def nextInvite():
 file = open("invites.txt", "w")
 
 print("Header sample")
-for i in range(3):
+for eeeeeeeeeeeee in range(3):
     print(header.generate())
+
+
+def fetchProxy(secure=True):
+    url = "https://api.proxyscrape.com/?request=getproxies&proxytype=https&timeout=1000&country=all&ssl=yes"
+    if not secure:
+        url = url.replace("https", "http")
+    response = requests.get(url)
+    wheeze = response.text.split("\r\n")
+    listDict = []
+    for i in wheeze:
+        if i == "": continue
+        if secure:
+            i = "https://" + i
+            listDict.append({"https": i})
+        else:
+            i = "http://" + i
+            listDict.append({"http": i})
+    return listDict
 
 
 def do(name=0, rangeStart=0, rangeEnd=1):
     print(f'Thread {name} started with range {rangeStart} to {rangeEnd}')
-
+    proxies = fetchProxy()
+    print(f'Thread {name} fetched {len(proxies)} proxies')
     for i in range(rangeStart, rangeEnd):
         try:
+            if i % len(proxies) == 0:
+                proxies = fetchProxy()
+                print(f'Thread {name} fetched {len(proxies)} proxies')
             url = nextInvite()
-            response = requests.get(url, headers=header.generate(), timeout=5)
+            proxy = random.choice(proxies)
+            response = requests.get(url, headers=header.generate(), timeout=2000, proxies=proxy)
+
             if response.status_code == 200:
                 file.write(response.text + "\n")
             elif response.status_code == 429:
@@ -61,14 +85,14 @@ def do(name=0, rangeStart=0, rangeEnd=1):
             elif response.status_code != 404:
                 print(f'{url} returned {response.status_code}')
         except Exception as e:
-            print(e)
-            time.sleep(1)
+            #print(e)
+            #time.sleep(1)
             continue
     print(f'Thread {name} finished')
 
 
 def main():
-    workerCount = 1
+    workerCount = 10
     eachWorker = possibleCombination // workerCount
     print("Possible Combinations: " + str(possibleCombination))
     print("Workers: " + str(workerCount))
