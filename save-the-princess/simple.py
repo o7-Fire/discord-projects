@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+#Space Complexity: o(1)
 
 class Pos(object):
     def __init__(self, x, y):
@@ -17,7 +18,6 @@ class Pos(object):
         return f'({self.x}, {self.y})'
     
 m = int(input())
-grid = {}
 wherePrincess = None
 whereMe = None
 def parseInput():
@@ -34,6 +34,7 @@ def parseInput():
                 wherePrincess = Pos(x,y)
             if wherePrincess is not None and whereMe is not None:
                 return
+
 
 def displayPathtoPrincess():
     global wherePrincess, whereMe
