@@ -80,16 +80,9 @@ class Game(object):
             self.player['x'] += 1
         else:
             raise Exception("Invalid direction: " + direction)
-        localX = self.player['x'] % GRID_SIZE_X
-        localY = self.player['y'] % GRID_SIZE_Y
-        if localX < 0:
-            self.current_grid_x = self.current_grid_x - 1
-        if localY < 0:
-            self.current_grid_y = self.current_grid_y - 1
-        if localX >= GRID_SIZE_X:
-            self.current_grid_x = self.current_grid_x + 1
-        if localY >= GRID_SIZE_Y:
-            self.current_grid_y = self.current_grid_y + 1
+
+        self.current_grid_y = self.player['y'] // GRID_SIZE_Y
+        self.current_grid_x = self.player['x'] // GRID_SIZE_X
         self.get_grid()
         self.save()
 
@@ -102,7 +95,7 @@ class Game(object):
             for localX in range(0, GRID_SIZE_X):
                 x = GRID_SIZE_X * self.current_grid_x + localX
                 y = GRID_SIZE_Y * self.current_grid_y + localY
-                block_id = self.current_grid[str(x)][str(y)]
+                block_id = self.current_grid[str(localX)][str(localY)]
                 if x == self.player['x'] and y == self.player['y']:
                     block_id = "B"  # body
                 if x == self.player['x'] and y == self.player['y'] + 1:
