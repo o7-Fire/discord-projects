@@ -1,5 +1,7 @@
-import nextcord as discord
 import os
+
+import nextcord as discord
+
 from Game import Game
 from View import DropdownView
 

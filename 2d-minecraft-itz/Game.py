@@ -4,9 +4,9 @@ import random
 import shutil
 
 import discord
+from noise import pnoise2
 
 import SaveFile
-from noise import pnoise2
 
 grid_folder = "data/grid"
 save_folder = "data/save"
@@ -118,7 +118,6 @@ class Game(object):
         if len(not_found) > 0:
             print("Resources Not found: " + str(not_found))
         if interaction is not None:
-
             embed = discord.Embed(title="Snake", description=text, color=0x00ff00)
             embed.set_author(name=str(interaction.user), icon_url=interaction.user.avatar.url)
             await interaction.message.edit(embed=embed)

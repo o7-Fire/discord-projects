@@ -1,4 +1,5 @@
 import nextcord as discord
+
 from Game import Game
 
 
