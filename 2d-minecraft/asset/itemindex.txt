@@ -1,1 +1,3 @@
 stick stick
+woodenpickaxe wooden_pickaxe
+stonepickaxe stone_pickaxe
