@@ -195,6 +195,7 @@ class Action(discord.ui.Select):
         options = [
             discord.SelectOption(label='Inventory', description='Open inventory page', emoji='🧰'),
             discord.SelectOption(label='Crafting', description='Open crafting page', emoji='⚒'),
+            discord.SelectOption(label='View recipes', description='Tells you all possible crafting recipes', emoji='⚒'),
             #discord.SelectOption(label='View Game', description='Open the game page', emoji='🕹️'),
             #discord.SelectOption(label='Save Game', description='Saves game to database', emoji='💾'),
             #discord.SelectOption(label='Load Game', description='Loads game from database', emoji='💾'),
@@ -211,6 +212,30 @@ class Action(discord.ui.Select):
             await msg.edit(embed=discord.Embed(description=render_inventory(msg, user)))
         elif option == "Crafting":
             await crafting2x2(msg, user)
+        elif option == "View recipes":
+            await msg.reply(f"<@{str(user.id)}> Check your DMs!")
+            finalmessage = "2x2 Recipes (does not require crafting table):\n\n"
+            for recipes in craftingrecipes2x2:
+                finalmessage += f"{str(craftingrecipes2x2[recipes]['amount'])} {recipes}: "
+                for requirements in craftingrecipes2x2[recipes]["itemsneeded"]:
+                    finalmessage += f"{str(craftingrecipes2x2[recipes]['itemsneeded'][requirements])} {requirements}, "
+                finalmessage = finalmessage[:-2] + "\n"
+
+            finalmessage += "\n3x3 Recipes (requires to be near a crafting table):\n\n"
+            for recipes in craftingrecipes3x3:
+                finalmessage += f"{str(craftingrecipes3x3[recipes]['amount'])} {recipes}: "
+                for requirements in craftingrecipes3x3[recipes]["itemsneeded"]:
+                    finalmessage += f"{str(craftingrecipes3x3[recipes]['itemsneeded'][requirements])} {requirements}, "
+                finalmessage = finalmessage[:-2] + "\n"
+            
+            totalmessage = ""
+            for line in finalmessage.split("\n"):
+                if (len(totalmessage) + len(line)) < 2000:
+                    totalmessage += line + "\n"
+                else:
+                    await user.send(totalmessage)
+                    totalmessage = ""
+            await user.send(finalmessage)
         """
         if option == "View Game":
             await msg.edit(embed=discord.Embed(description=render(msg, user)))
