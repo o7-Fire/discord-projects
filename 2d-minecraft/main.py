@@ -498,7 +498,7 @@ async def on_message(message):
         currentgame[str(message.author.id)] = {
             "seed": freq,
             "Position": {
-                "x":0, "y":5
+                "x":0, "y":50
             },
             "inventory": {
 
@@ -510,6 +510,13 @@ async def on_message(message):
                 "noclip":False,
             }
         }
+        do = True
+        while do:
+            generatechunks(message, message.author)
+            if on_floor(message, message.author):
+                do = False
+            else:
+                currentgame[str(message.author.id)]["Position"]["y"] -= 1
         embed = discord.Embed(description=render(message))
         await message.channel.send(embed=embed, view=DropdownView())
         
