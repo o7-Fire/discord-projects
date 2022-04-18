@@ -41,6 +41,7 @@ async def on_message(message):
             return
         games[message.author.id].delete()
         del games[message.author.id]
+        await message.channel.send("Game deleted!")
 
 
 client.run(TOKEN)

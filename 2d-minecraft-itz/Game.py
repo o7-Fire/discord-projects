@@ -135,8 +135,7 @@ class Game(object):
     def delete(self):
         # delete file and world
         os.remove(self.get_save_file())
-        folder = os.path.join(save_folder, self.player_id)
-        shutil.rmtree(folder)
+        shutil.rmtree(self.get_grid_folder())
 
 
 if __name__ == '__main__':
