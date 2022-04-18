@@ -1,9 +1,11 @@
-dirt dirt 100_dirt
-cobblestone cobblestone 100_cobblestone
-stone stone 100_cobblestone
-grassblock grass_block 100_dirt
-ironore iron_ore 100_ironore
-oaklog oak_log 100_oaklog
-oakplanks oak_planks 100_oakplanks
-oaksapling oak_sapling 100_oak_sapling
-oakleaf oak_leaves 5_stick,5_oaksapling
+dirt dirt 100_dirt 0
+cobblestone cobblestone 100_cobblestone 1
+stone stone 100_cobblestone 1
+grassblock grass_block 100_dirt 0
+ironore iron_ore 100_ironore 2
+oaklog oak_log 100_oaklog 0
+oakplanks oak_planks 100_oakplanks 0
+oaksapling oak_sapling 100_oak_sapling 0
+oakleaf oak_leaves 5_stick,5_oaksapling 0
+furnace furnace 100_furnace 1
+craftingtable crafting_table 100_craftingtable 0
