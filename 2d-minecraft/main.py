@@ -3,6 +3,7 @@ from perlin_noise import PerlinNoise
 from noise import pnoise2
 import random
 import time
+import asyncio
 import math
 import os
 
@@ -11,7 +12,36 @@ client = discord.Client()
 currentgame = {}
 block_index = {}
 item_index = {}
+craftingrecipes2x2 = {}
+craftingrecipes3x3 = {}
 
+with open("./asset/craftingrecipes.txt") as f:
+    t = f.read().split("\n")
+    for c in t:
+        tt = c.split(" ")
+        craftingrecipes3x3[tt[0]] = {
+            "amount": tt[1],
+            "itemsneeded": {
+            
+            }
+        }
+        for i in range(int((len(tt) - 2) / 2)):
+            count = (i*2) + 2
+            craftingrecipes3x3[tt[0]]["itemsneeded"][tt[count]] = int(tt[count+1])
+print(craftingrecipes3x3)
+with open("./asset/craftingrecipes2.txt") as f:
+    t = f.read().split("\n")
+    for c in t:
+        tt = c.split(" ")
+        craftingrecipes2x2[tt[0]] = {
+            "amount": tt[1],
+            "itemsneeded": {
+            
+            }
+        }
+        for i in range(int((len(tt) - 2) / 2)):
+            count = (i * 2) + 2
+            craftingrecipes2x2[tt[0]]["itemsneeded"][tt[count]] = int(tt[count + 1])
 with open("./asset/itemindex.txt", "r") as f:
     t = f.read().split("\n")
     for item in t:
@@ -27,7 +57,8 @@ with open("./asset/blockindex.txt", "r") as f:
             "name": tt[1].replace("_", " "),
             "drops": {
             
-            }
+            },
+            "hardness":tt[3]
         }
         for drop in tt[2].split(","):
             dropdata = drop.split("_")
@@ -129,12 +160,12 @@ class Mine(discord.ui.Select):
                         if random.randint(1, 100) == blockindextile["drops"][block]:
                             if block in block_index: extramessagetosay = f"Mined {str(amount)} {block_index[block]['name']}!"
                             else: extramessagetosay = f"Mined {str(amount)} {item_index[block]['name']}!"
-                            add_item(msg, user, block, amount)
+                            add_item(user, block, amount)
                             dotheblock = False
                     else: #im sorry for your eyes
                         if block in block_index: extramessagetosay = f"Mined {str(amount)} {block_index[block]['name']}!"
                         else: extramessagetosay = f"Mined {str(amount)} {item_index[block]['name']}!"
-                        add_item(msg, user, block, amount)
+                        add_item(user, block, amount)
             await msg.edit(embed=discord.Embed(description=render(msg, user, extramessagetosay)))
         # handle options
         if option == "<^":
@@ -163,6 +194,7 @@ class Action(discord.ui.Select):
     def __init__(self):
         options = [
             discord.SelectOption(label='Inventory', description='Open inventory page', emoji='🧰'),
+            discord.SelectOption(label='Crafting', description='Open crafting page', emoji='⚒'),
             #discord.SelectOption(label='View Game', description='Open the game page', emoji='🕹️'),
             #discord.SelectOption(label='Save Game', description='Saves game to database', emoji='💾'),
             #discord.SelectOption(label='Load Game', description='Loads game from database', emoji='💾'),
@@ -177,6 +209,8 @@ class Action(discord.ui.Select):
         # handle actions
         if option == "Inventory":
             await msg.edit(embed=discord.Embed(description=render_inventory(msg, user)))
+        elif option == "Crafting":
+            await crafting2x2(msg, user)
         """
         if option == "View Game":
             await msg.edit(embed=discord.Embed(description=render(msg, user)))
@@ -206,7 +240,21 @@ class DropdownView(discord.ui.View):
         self.add_item(Movement())
         self.add_item(Mine())
         self.add_item(Action())
-
+    
+def gettile(tile):
+    match tile:
+        case "grassblock":return "<:g_:939809738852548628>"
+        case "dirt":return "<:d_:939809769462566983>"
+        case "stone":return "<:s_:939809867902910524>"
+        case "sky":return "<:b2:939815809117724703>"
+        case "ironore":return "<:i1:960482977559748608>"
+        case "oaklog":return "<:wl1:960812648113504270>"
+        case "oakleaf":return "<:wl11:960812925340233758>"
+        case "off_furnace":return "<:f1:962212558809477170>"
+        case "on_furnace":return "<:f2:962212567550427176>"
+        case "craftingtable":return "<:c3:962216007852757004>"
+        case "stick":return "<:s1:962218518605074533>"
+        
 def valid_movement(message, user=0): #checks if sky is on player
     if currentgame[str(user.id)]["cheats"]["noclip"]:
         return True
@@ -233,13 +281,13 @@ def on_floor(message, user=0): #checks whats below player, then return false if 
         else:
             return True
 
-def add_item(message, user, itemname, amount):
+def add_item(user, itemname, amount):
     if itemname in currentgame[str(user.id)]["inventory"]:
         currentgame[str(user.id)]["inventory"][itemname] = currentgame[str(user.id)]["inventory"][itemname] + amount
     else:
-        currentgame[str(user.id)]["inventory"][itemname] = amount
+        currentgame[str(user.id)]["inventory"][itemname] = int(amount)
     
-def generate_models(modelname, message, user, x, y):
+def generate_models(modelname, user, x, y):
     with open(f"./models/{modelname}.txt", "r") as f:
         data = f.read().split("\n")
     for tile in data:
@@ -247,6 +295,73 @@ def generate_models(modelname, message, user, x, y):
         if data2[2] != "air":
             currentgame[str(user.id)]["gamechunks"][f"{str(x + int(data2[0]))}X{str(y + int(data2[1]))}"] = data2[2]
    
+async def crafting2x2(message, user=0):
+    if user == 0:
+        user = message.author
+    def check(msg):
+        return msg.author == user
+    clientmsg1 = await message.reply("What do you want to craft? (2x2)")
+    msg = await client.wait_for('message', check=check, timeout=30)
+    
+    therecipe = ""
+    do = False
+    for recipes in craftingrecipes2x2:
+        if recipes == msg.content:
+            do = True
+            therecipe = recipes
+            
+    if not do:
+        clientmsg2 = await msg.reply("No crafting recipe found for that.")
+        await asyncio.sleep(3)
+        await clientmsg1.delete()
+        await msg.delete()
+        await clientmsg2.delete()
+    else:
+        recipe = craftingrecipes2x2[therecipe]
+        finalmessage = f"To craft {recipe['amount']} {therecipe} you need "
+        for requirement in recipe["itemsneeded"]:
+            finalmessage += f"{recipe['itemsneeded'][requirement]} {requirement}, "
+        finalmessage = finalmessage[:-2] + ". Do you want to craft? (Y/N)"
+        clientmsg3 = await msg.reply(finalmessage)
+        mesg = await client.wait_for('message', check=check, timeout=30)
+        
+        if mesg.content == "Y":
+            meetallrequirements = True
+            for requirement in recipe["itemsneeded"]:
+                if currentgame[str(user.id)]["inventory"][requirement]:
+                    if currentgame[str(user.id)]["inventory"][requirement] > recipe["itemsneeded"][requirement]:
+                        theveryusefuldonothingvalue = 0
+                    else:
+                        meetallrequirements = False
+                else:
+                    meetallrequirements = False
+                    
+            if meetallrequirements:
+                for requirement in recipe["itemsneeded"]:
+                    currentgame[str(user.id)]["inventory"][requirement] = currentgame[str(user.id)]["inventory"][requirement] - recipe["itemsneeded"][requirement]
+                add_item(user, therecipe, recipe['amount'])
+                clientmsg5 = await mesg.reply(f"Crafted {recipe['amount']} {therecipe}.")
+                await asyncio.sleep(3)
+                await clientmsg1.delete()
+                await msg.delete()
+                await clientmsg3.delete()
+                await mesg.delete()
+                await clientmsg5.delete()
+            else:
+                clientmsg4 = await mesg.reply("You do not have the required items to craft it.")
+                await asyncio.sleep(3)
+                await clientmsg1.delete()
+                await msg.delete()
+                await clientmsg3.delete()
+                await mesg.delete()
+                await clientmsg4.delete()
+        else:
+            await asyncio.sleep(3)
+            await clientmsg1.delete()
+            await msg.delete()
+            await clientmsg3.delete()
+            await mesg.delete()
+        
 def render_inventory(message, user=0, additional_message=""):
     if user == 0:
         user = message.author
@@ -284,9 +399,9 @@ def generatechunks(message, user=0):
                     currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "grassblock"
                     if random.randint(1, 12) == 1:
                         if random.randint(1, 3) == 1:
-                            generate_models("largeoaktree", message, user, tx-4, ty)
+                            generate_models("largeoaktree", user, tx-4, ty)
                         else:
-                            generate_models("oaktree", message, user, tx - 2, ty + 1)
+                            generate_models("oaktree", user, tx - 2, ty + 1)
                 elif thenoise - 12 < ty < thenoise - 5:
                     currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
                 else:
@@ -347,23 +462,9 @@ def render(message, user=0, additional_message=""):
                 do = False
                 
             if do:
-                match tile:
-                    case "grassblock":
-                        finalmessage += "<:g_:939809738852548628>"
-                    case "dirt":
-                        finalmessage += "<:d_:939809769462566983>"
-                    case "stone":
-                        finalmessage += "<:s_:939809867902910524>"
-                    case "sky":
-                        finalmessage += "<:b2:939815809117724703>"
-                    case "ironore":
-                        finalmessage += "<:i1:960482977559748608>"
-                    case "oaklog":
-                        finalmessage += "<:wl1:960812648113504270>"
-                    case "oakleaf":
-                        finalmessage += "<:wl11:960812925340233758>"
+                finalmessage += gettile(tile)
         finalmessage += "\n"
-        debugfinalmessage += "\n" #debug
+        debugfinalmessage += "\n"  # debug
     print(f"{debugfinalmessage}\n\n{playerpos}") #debug
     return finalmessage
 
@@ -387,6 +488,9 @@ async def on_message(message):
         currentgame[str(message.author.id)]["Position"]["y"] = int(args[2])
         render(message)
         await message.channel.send("Done!")
+    if message.content.startswith("additem "):
+        args = message.content.split(" ")
+        add_item(message.author, args[1], args[2])
     if message.content == "start game2":
         random.seed()
         octaves = random.random()
