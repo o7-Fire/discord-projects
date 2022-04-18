@@ -125,7 +125,6 @@ class Movement(discord.ui.Select):
                     currentgame[str(user.id)]["Position"]["y"] -= 1
                     await msg.edit(embed=discord.Embed(description=render(msg, user)))
 
-
 class Mine(discord.ui.Select):
     def __init__(self):
         options = [
