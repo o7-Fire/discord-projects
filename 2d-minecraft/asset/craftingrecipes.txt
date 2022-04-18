@@ -1,0 +1,5 @@
+planks 4 log 1
+stick 4 planks 2
+woodenpickaxe 1 planks 3 stick 2
+stonepickaxe 1 cobblestone 3 stick 2
+furnace 1 cobblestone 8
