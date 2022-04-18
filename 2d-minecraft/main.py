@@ -7,7 +7,7 @@ import asyncio
 import math
 import os
 
-TOKEN = ""
+TOKEN = "" or os.environ.get("TOKEN")
 client = discord.Client()
 currentgame = {}
 block_index = {}
