@@ -63,10 +63,10 @@ class Game(object):
     def generate_grid(self, gridX, gridY):
         grid = {}
         for y in range(0, GRID_SIZE_X):
-            grid[y] = {}
+            grid[str(y)] = {}
             for x in range(0, GRID_SIZE_Y):
                 blockType = int(pnoise2(gridX / self.seed / 4, gridY / self.seed / 4) * 75) + 5
-                grid[y][x] = blockType
+                grid[str(y)][str(x)] = blockType
         return grid
 
     def move_player(self, direction):
