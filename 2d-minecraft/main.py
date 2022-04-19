@@ -210,7 +210,10 @@ class Action(discord.ui.Select):
         if option == "Inventory":
             await msg.edit(embed=discord.Embed(description=render_inventory(msg, user)))
         elif option == "Crafting":
-            await crafting2x2(msg, user)
+            if nearcraftingtable(msg, user):
+                await crafting(msg, user, "3x3")
+            else:
+                await crafting(msg, user, "2x2")
         elif option == "View recipes":
             await msg.reply(f"<@{str(user.id)}> Check your DMs!")
             finalmessage = "2x2 Recipes (does not require crafting table):\n\n"
@@ -360,7 +363,20 @@ def on_floor(message, user=0): #checks whats below player, then return false if 
             return False
         else:
             return True
-
+        
+def nearcraftingtable(message, user=0): #checks if sky is on player
+    if user == 0:
+        user = message.author
+    plrx = currentgame[str(user.id)]["Position"]["x"]
+    plry = currentgame[str(user.id)]["Position"]["y"]
+    for x in range(3):
+        for y in range(4):
+            thex = x - 1
+            they = y - 1
+            if currentgame[str(user.id)]["gamechunks"][f"{str(plrx + thex)}X{str(plry + they)}"] == "craftingtable":
+                return True
+    return False
+        
 def add_item(user, itemname, amount):
     if itemname in currentgame[str(user.id)]["inventory"]:
         currentgame[str(user.id)]["inventory"][itemname] = currentgame[str(user.id)]["inventory"][itemname] + amount
@@ -374,22 +390,29 @@ def generate_models(modelname, user, x, y):
         data2 = tile.split(" ")
         if data2[2] != "air":
             currentgame[str(user.id)]["gamechunks"][f"{str(x + int(data2[0]))}X{str(y + int(data2[1]))}"] = data2[2]
-   
-async def crafting2x2(message, user=0):
+
+
+async def crafting(message, user=0, type="2x2"):
+    if type == "2x2":
+        therecipetype = craftingrecipes2x2
+    else:
+        therecipetype = craftingrecipes3x3
     if user == 0:
         user = message.author
+    
     def check(msg):
         return msg.author == user
-    clientmsg1 = await message.reply("What do you want to craft? (2x2)")
+    
+    clientmsg1 = await message.reply(f"What do you want to craft? ({type})")
     msg = await client.wait_for('message', check=check, timeout=30)
     
     therecipe = ""
     do = False
-    for recipes in craftingrecipes2x2:
+    for recipes in therecipetype:
         if recipes == msg.content:
             do = True
             therecipe = recipes
-            
+    
     if not do:
         clientmsg2 = await msg.reply("No crafting recipe found for that.")
         await asyncio.sleep(3)
@@ -397,7 +420,7 @@ async def crafting2x2(message, user=0):
         await msg.delete()
         await clientmsg2.delete()
     else:
-        recipe = craftingrecipes2x2[therecipe]
+        recipe = therecipetype[therecipe]
         finalmessage = f"To craft {recipe['amount']} {therecipe} you need "
         for requirement in recipe["itemsneeded"]:
             finalmessage += f"{recipe['itemsneeded'][requirement]} {requirement}, "
@@ -415,10 +438,12 @@ async def crafting2x2(message, user=0):
                         meetallrequirements = False
                 else:
                     meetallrequirements = False
-                    
+            
             if meetallrequirements:
                 for requirement in recipe["itemsneeded"]:
-                    currentgame[str(user.id)]["inventory"][requirement] = currentgame[str(user.id)]["inventory"][requirement] - recipe["itemsneeded"][requirement]
+                    currentgame[str(user.id)]["inventory"][requirement] = currentgame[str(user.id)]["inventory"][
+                                                                              requirement] - recipe["itemsneeded"][
+                                                                              requirement]
                 add_item(user, therecipe, recipe['amount'])
                 clientmsg5 = await mesg.reply(f"Crafted {recipe['amount']} {therecipe}.")
                 await asyncio.sleep(3)
