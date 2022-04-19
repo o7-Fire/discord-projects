@@ -7,7 +7,7 @@ import asyncio
 import math
 import os
 
-TOKEN = "" or os.environ.get("TOKEN")
+TOKEN = ""
 client = discord.Client()
 currentgame = {}
 block_index = {}
@@ -125,6 +125,7 @@ class Movement(discord.ui.Select):
                     currentgame[str(user.id)]["Position"]["y"] -= 1
                     await msg.edit(embed=discord.Embed(description=render(msg, user)))
 
+
 class Mine(discord.ui.Select):
     def __init__(self):
         options = [
@@ -196,8 +197,7 @@ class Action(discord.ui.Select):
             discord.SelectOption(label='Crafting', description='Open crafting page', emoji='⚒'),
             discord.SelectOption(label='View recipes', description='Tells you all possible crafting recipes', emoji='⚒'),
             #discord.SelectOption(label='View Game', description='Open the game page', emoji='🕹️'),
-            #discord.SelectOption(label='Save Game', description='Saves game to database', emoji='💾'),
-            #discord.SelectOption(label='Load Game', description='Loads game from database', emoji='💾'),
+            discord.SelectOption(label='Save game', description='Saves game to database', emoji='💾'),
         ]
         super().__init__(placeholder='Action', min_values=1, max_values=1, options=options)
     
@@ -235,6 +235,12 @@ class Action(discord.ui.Select):
                     await user.send(totalmessage)
                     totalmessage = ""
             await user.send(finalmessage)
+        elif option == "Save game":
+            s = savegame(msg, user)
+            if s == False:
+                await msg.reply(f"<@{str(user.id)}> Failed to save game.")
+            else:
+                await msg.reply(f"<@{str(user.id)}> Saved game successfully!")
         """
         if option == "View Game":
             await msg.edit(embed=discord.Embed(description=render(msg, user)))
@@ -279,6 +285,56 @@ def gettile(tile):
         case "craftingtable":return "<:c3:962216007852757004>"
         case "stick":return "<:s1:962218518605074533>"
         
+def savegame(message, user=0):
+    if user == 0:
+        user = message.author
+    try:
+        with open(f"./saves/{str(user.id)}.txt", "w+") as f:
+            game = currentgame[str(user.id)]
+            finalmessage = f"{str(game['seed'])}\n{str(game['Position']['x'])} {str(game['Position']['y'])}\n"
+            for item in game["inventory"]:
+                finalmessage += f"{item}_{game['inventory'][item]} "
+            finalmessage = finalmessage[:-1]
+            finalmessage += "\n"
+            for tile in game["gamechunks"]:
+                finalmessage += f"{tile}_{game['gamechunks'][tile]} "
+            finalmessage = finalmessage[:-1]
+            f.write(finalmessage)
+        return True
+    except:
+        return False #impossible
+        
+def loadgame(message, user=0):
+    if user == 0:
+        user = message.author
+    total = 0
+    game = currentgame[str(user.id)]
+    if os.path.exists(f"./saves/{str(user.id)}.txt"):
+        with open(f"./saves/{str(user.id)}.txt", "r+") as f:
+            for line in f.read().split("\n"):
+                total += 1
+                if total == 1:
+                    game["seed"] = float(line)
+                elif total == 2:
+                    splitted = line.split(" ")
+                    game["Position"]["x"] = int(splitted[0])
+                    game["Position"]["y"] = int(splitted[1])
+                elif total == 3:
+                    items = line.split(" ")
+                    for splitted in items:
+                        itemsplit = splitted.split("_")
+                        game["inventory"][itemsplit[0]] = itemsplit[1]
+                elif total == 4:
+                    tiles = line.split(" ")
+                    for splitted in tiles:
+                        tilesplit = splitted.split("_")
+                        game["gamechunks"][tilesplit[0]] = tilesplit[1]
+                else:
+                    raise Exception("this isnt a possible error")
+        return True
+    else:
+        return False
+    
 def valid_movement(message, user=0): #checks if sky is on player
     if currentgame[str(user.id)]["cheats"]["noclip"]:
         return True
@@ -421,11 +477,12 @@ def generatechunks(message, user=0):
                     currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "dirt"
                 elif ty == thenoise:
                     currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "grassblock"
-                    if random.randint(1, 12) == 1:
-                        if random.randint(1, 3) == 1:
-                            generate_models("largeoaktree", user, tx-4, ty)
-                        else:
-                            generate_models("oaktree", user, tx - 2, ty + 1)
+                    if currentgame[str(user.id)]["cangeneratemodels"]:
+                        if random.randint(1, 12) == 1:
+                            if random.randint(1, 3) == 1:
+                                generate_models("largeoaktree", user, tx-4, ty)
+                            else:
+                                generate_models("oaktree", user, tx - 2, ty + 1)
                 elif thenoise - 12 < ty < thenoise - 5:
                     currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"] = "stone"
                 else:
@@ -515,33 +572,45 @@ async def on_message(message):
     if message.content.startswith("additem "):
         args = message.content.split(" ")
         add_item(message.author, args[1], args[2])
-    if message.content == "start game2":
+    if message.content == "start game":
         random.seed()
         octaves = random.random()
         freq = 150.0 * octaves
         currentgame[str(message.author.id)] = {
+            "cangeneratemodels": True, #a simple solution for a problem that will need to be solved later
             "seed": freq,
             "Position": {
-                "x":0, "y":50
+                "x": 0, "y": 50
             },
             "inventory": {
-
+                "log":0
             },
             "gamechunks": {
-            
+        
             },
             "cheats": {
-                "noclip":False,
+                "noclip": False,
             }
         }
-        do = True
-        while do:
-            generatechunks(message, message.author)
-            if on_floor(message, message.author):
-                do = False
-            else:
-                currentgame[str(message.author.id)]["Position"]["y"] -= 1
-        embed = discord.Embed(description=render(message))
-        await message.channel.send(embed=embed, view=DropdownView())
-        
+
+        currentgame[str(message.author.id)]["cangeneratemodels"] = False
+        l = loadgame(message, message.author)
+        #print(l)
+        #print(currentgame[str(message.author.id)]["Position"])
+        if l == False:
+            do = True
+            while do:
+                generatechunks(message, message.author)
+                if on_floor(message, message.author):
+                    do = False
+                else:
+                    currentgame[str(message.author.id)]["Position"]["y"] -= 1
+            embed = discord.Embed(description=render(message))
+            await message.channel.send(embed=embed, view=DropdownView())
+        else:
+            embed = discord.Embed(description=render(message))
+            await message.channel.send(embed=embed, view=DropdownView())
+            await message.channel.send("Game loaded successfully!")
+            currentgame[str(message.author.id)]["cangeneratemodels"] = True
+            
 client.run(TOKEN)
