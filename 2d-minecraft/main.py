@@ -149,24 +149,26 @@ class Mine(discord.ui.Select):
             plrx = currentgame[str(user.id)]["Position"]["x"]
             plry = currentgame[str(user.id)]["Position"]["y"]
             thetilename = currentgame[str(user.id)]["gamechunks"][f"{str(plrx + x)}X{str(plry + y)}"]
-            currentgame[str(user.id)]["gamechunks"][f"{str(plrx + x)}X{str(plry + y)}"] = "sky"
             
-            blockindextile = block_index[thetilename]
-            dotheblock = True
-            for block in blockindextile["drops"]:
-                if dotheblock:
-                    amount = 1
-                    if blockindextile["drops"][block] != 100:
-                        if random.randint(1, 100) == blockindextile["drops"][block]:
+            if thetilename != "sky":
+                currentgame[str(user.id)]["gamechunks"][f"{str(plrx + x)}X{str(plry + y)}"] = "sky"
+                
+                blockindextile = block_index[thetilename]
+                dotheblock = True
+                for block in blockindextile["drops"]:
+                    if dotheblock:
+                        amount = 1
+                        if blockindextile["drops"][block] != 100:
+                            if random.randint(1, 100) == blockindextile["drops"][block]:
+                                if block in block_index: extramessagetosay = f"Mined {str(amount)} {block_index[block]['name']}!"
+                                else: extramessagetosay = f"Mined {str(amount)} {item_index[block]['name']}!"
+                                add_item(user, block, amount)
+                                dotheblock = False
+                        else: #im sorry for your eyes
                             if block in block_index: extramessagetosay = f"Mined {str(amount)} {block_index[block]['name']}!"
                             else: extramessagetosay = f"Mined {str(amount)} {item_index[block]['name']}!"
                             add_item(user, block, amount)
-                            dotheblock = False
-                    else: #im sorry for your eyes
-                        if block in block_index: extramessagetosay = f"Mined {str(amount)} {block_index[block]['name']}!"
-                        else: extramessagetosay = f"Mined {str(amount)} {item_index[block]['name']}!"
-                        add_item(user, block, amount)
-            await msg.edit(embed=discord.Embed(description=render(msg, user, extramessagetosay)))
+                await msg.edit(embed=discord.Embed(description=render(msg, user, extramessagetosay)))
         # handle options
         if option == "<^":
             await randomfunctionformining(-1, 0)
@@ -190,17 +192,64 @@ class Mine(discord.ui.Select):
                     currentgame[str(user.id)]["Position"]["y"] -= 1
                     await msg.edit(embed=discord.Embed(description=render(msg, user, extramessagetosay)))
 
+
+class Place(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label='<^', description='Place held item to top left', emoji='↖'),
+            discord.SelectOption(label='<V', description='Place held item to bottom left', emoji='↙'),
+            discord.SelectOption(label='^', description='Place held item to up', emoji='⬆'),
+            discord.SelectOption(label='V', description='Place held item to down', emoji='⬇'),
+            discord.SelectOption(label='^>', description='Place held item to top right', emoji='↗'),
+            discord.SelectOption(label='V>', description='Place held item to bottom left', emoji='↘'),
+        ]
+        super().__init__(placeholder='Place', min_values=1, max_values=1, options=options)
+    
+    async def callback(self, interaction: discord.Interaction):
+        msg = interaction.message
+        user = interaction.user
+        option = self.values[0]
+        extramessagetosay = ""
+        
+        async def randomfunctionforplacing(x, y):
+            global extramessagetosay
+            plrx = currentgame[str(user.id)]["Position"]["x"]
+            plry = currentgame[str(user.id)]["Position"]["y"]
+            thetilename = currentgame[str(user.id)]["gamechunks"][f"{str(plrx + x)}X{str(plry + y)}"]
+            currentgame[str(user.id)]["gamechunks"][f"{str(plrx + x)}X{str(plry + y)}"] = "sky"
+            held_item = currentgame[str(user.id)]["held_item"]
+            if held_item != "nothing":
+                currentgame[str(user.id)]["gamechunks"][f"{str(plrx + x)}X{str(plry + y)}"] = held_item
+                add_item(user, held_item, -1)
+                if int(currentgame[str(user.id)]["inventory"][held_item]) < 1:
+                    currentgame[str(user.id)]["held_item"] = "nothing"
+            await msg.edit(embed=discord.Embed(description=render(msg, user)))
+        
+        # handle options
+        if option == "<^":
+            await randomfunctionforplacing(-1, 0)
+        elif option == "<V":
+            await randomfunctionforplacing(-1, -1)
+        elif option == "^":
+            await randomfunctionforplacing(0, 1)
+        elif option == "V":
+            await randomfunctionforplacing(0, -2)
+        elif option == "^>":
+            await randomfunctionforplacing(1, 0)
+        elif option == "V>":
+            await randomfunctionforplacing(1, -1)
+            
 class Action(discord.ui.Select):
     def __init__(self):
         options = [
             discord.SelectOption(label='Inventory', description='Open inventory page', emoji='🧰'),
             discord.SelectOption(label='Crafting', description='Open crafting page', emoji='⚒'),
             discord.SelectOption(label='View recipes', description='Tells you all possible crafting recipes', emoji='⚒'),
-            #discord.SelectOption(label='View Game', description='Open the game page', emoji='🕹️'),
+            discord.SelectOption(label='Equip block', description='Equips a type of block onto your hand', emoji='🕹️'),
             discord.SelectOption(label='Save game', description='Saves game to database', emoji='💾'),
         ]
         super().__init__(placeholder='Action', min_values=1, max_values=1, options=options)
-    
+        
     async def callback(self, interaction: discord.Interaction):
         msg = interaction.message
         user = interaction.user
@@ -209,11 +258,13 @@ class Action(discord.ui.Select):
         # handle actions
         if option == "Inventory":
             await msg.edit(embed=discord.Embed(description=render_inventory(msg, user)))
+            
         elif option == "Crafting":
             if nearcraftingtable(msg, user):
                 await crafting(msg, user, "3x3")
             else:
                 await crafting(msg, user, "2x2")
+                
         elif option == "View recipes":
             await msg.reply(f"<@{str(user.id)}> Check your DMs!")
             finalmessage = "2x2 Recipes (does not require crafting table):\n\n"
@@ -238,40 +289,46 @@ class Action(discord.ui.Select):
                     await user.send(totalmessage)
                     totalmessage = ""
             await user.send(finalmessage)
+            
+        elif option == "Equip block":
+            game = currentgame[str(user.id)]
+            async def deleteall(list):
+                await asyncio.sleep(3)
+                for message in list:
+                    await message.delete()
+            def check(msg):
+                return msg.author == user
+            clientmsg1 = await msg.reply(f"What do you want to hold?")
+            mesg = await client.wait_for('message', check=check, timeout=30)
+            if mesg.content in block_index:
+                if mesg.content in game["inventory"]:
+                    if int(game["inventory"][mesg.content]) > 0:
+                        currentgame[str(user.id)]["held_item"] = mesg.content
+                        clientmsg2 = await mesg.reply("Equipped block!")
+                        await deleteall([clientmsg1, mesg, clientmsg2])
+                    else:
+                        clientmsg2 = await mesg.reply("You do not have enough blocks.")
+                        await deleteall([clientmsg1, mesg, clientmsg2])
+                else:
+                    clientmsg2 = await mesg.reply("You do not have any of those blocks.")
+                    await deleteall([clientmsg1, mesg, clientmsg2])
+            else:
+                clientmsg2 = await mesg.reply("That is not in the block index.")
+                await deleteall([clientmsg1, mesg, clientmsg2])
+            
         elif option == "Save game":
             s = savegame(msg, user)
             if s == False:
                 await msg.reply(f"<@{str(user.id)}> Failed to save game.")
             else:
                 await msg.reply(f"<@{str(user.id)}> Saved game successfully!")
-        """
-        if option == "View Game":
-            await msg.edit(embed=discord.Embed(description=render(msg, user)))
-        elif option == "Save Game":
-            try:
-                save_game(msg, user)
-                await interaction.response.send_message(f"<@{interaction.user.id}> Saved game successfully!")
-            except Exception as e:
-                await interaction.response.send_message(
-                    f"<@{interaction.user.id}> Failed to save game. Error: ```{e}```")
-        elif option == "Load Game":
-            try:
-                res = load_game(msg, user)
-                if res == False:
-                    await interaction.response.send_message(f"<@{interaction.user.id}> You do not have a save.")
-                else:
-                    await interaction.response.send_message(f"<@{interaction.user.id}> Game loaded successfully!")
-                    await msg.edit(embed=discord.Embed(description=render(msg, user)))
-            except Exception as e:
-                await interaction.response.send_message(
-                    f"<@{interaction.user.id}> Failed to load game. Error: ```{e}```")
-        """
         
 class DropdownView(discord.ui.View):
     def __init__(self):
         super().__init__()
         self.add_item(Movement())
         self.add_item(Mine())
+        self.add_item(Place())
         self.add_item(Action())
     
 def gettile(tile):
@@ -399,7 +456,11 @@ async def crafting(message, user=0, type="2x2"):
         therecipetype = craftingrecipes3x3
     if user == 0:
         user = message.author
-    
+
+    async def deleteall(list):
+        await asyncio.sleep(3)
+        for message in list:
+            await message.delete()
     def check(msg):
         return msg.author == user
     
@@ -415,10 +476,7 @@ async def crafting(message, user=0, type="2x2"):
     
     if not do:
         clientmsg2 = await msg.reply("No crafting recipe found for that.")
-        await asyncio.sleep(3)
-        await clientmsg1.delete()
-        await msg.delete()
-        await clientmsg2.delete()
+        deleteall([clientmsg1, msg, clientmsg2])
     else:
         recipe = therecipetype[therecipe]
         finalmessage = f"To craft {recipe['amount']} {therecipe} you need "
@@ -446,26 +504,12 @@ async def crafting(message, user=0, type="2x2"):
                                                                               requirement]
                 add_item(user, therecipe, recipe['amount'])
                 clientmsg5 = await mesg.reply(f"Crafted {recipe['amount']} {therecipe}.")
-                await asyncio.sleep(3)
-                await clientmsg1.delete()
-                await msg.delete()
-                await clientmsg3.delete()
-                await mesg.delete()
-                await clientmsg5.delete()
+                deleteall([clientmsg1, msg, clientmsg3, mesg, clientmsg5])
             else:
                 clientmsg4 = await mesg.reply("You do not have the required items to craft it.")
-                await asyncio.sleep(3)
-                await clientmsg1.delete()
-                await msg.delete()
-                await clientmsg3.delete()
-                await mesg.delete()
-                await clientmsg4.delete()
+                deleteall([clientmsg1, msg, clientmsg3, mesg, clientmsg4])
         else:
-            await asyncio.sleep(3)
-            await clientmsg1.delete()
-            await msg.delete()
-            await clientmsg3.delete()
-            await mesg.delete()
+            deleteall([clientmsg1, msg, clientmsg3, mesg])
         
 def render_inventory(message, user=0, additional_message=""):
     if user == 0:
@@ -603,12 +647,13 @@ async def on_message(message):
         freq = 150.0 * octaves
         currentgame[str(message.author.id)] = {
             "cangeneratemodels": True, #a simple solution for a problem that will need to be solved later
+            "held_item": "nothing",
             "seed": freq,
             "Position": {
                 "x": 0, "y": 50
             },
             "inventory": {
-                "log":0
+                "oaklog":0
             },
             "gamechunks": {
         
