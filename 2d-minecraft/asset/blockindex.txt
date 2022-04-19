@@ -3,6 +3,8 @@ cobblestone cobblestone 100_cobblestone 1
 stone stone 100_cobblestone 1
 grassblock grass_block 100_dirt 0
 ironore iron_ore 100_ironore 2
+coalore coal_ore 100_coalore 1
+copperore copper_ore 100_copperore 2
 oaklog oak_log 100_oaklog 0
 oakplanks oak_planks 100_oakplanks 0
 oaksapling oak_sapling 100_oak_sapling 0
