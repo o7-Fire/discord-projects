@@ -95,9 +95,12 @@ class Movement(discord.ui.Select):
                 currentgame[str(user.id)]["Position"]["x"] += 1
             await msg.edit(embed=discord.Embed(description=render(msg, user)))
         elif option == "^":
-            didJumpThisInput = True
+            if currentgame[str(user.id)]["jumped_frame"] == False:
+                currentgame[str(user.id)]["jumped_frame"] = True
+            else:
+                currentgame[str(user.id)]["jumped_frame"] = False
             currentgame[str(user.id)]["Position"]["y"] += 1
-            if not valid_movement(msg, user) and didJumpThisInput == False:
+            if not valid_movement(msg, user):
                 currentgame[str(user.id)]["Position"]["y"] -= 1
             await msg.edit(embed=discord.Embed(description=render(msg, user)))
         elif option == "V":
@@ -116,14 +119,15 @@ class Movement(discord.ui.Select):
                 currentgame[str(user.id)]["Position"]["x"] -= 5
             await msg.edit(embed=discord.Embed(description=render(msg, user)))
             
-        if not on_floor(interaction.message, interaction.user):
-            do = True
-            while do:
-                if on_floor(interaction.message, interaction.user):
-                    do = False
-                else:
-                    currentgame[str(user.id)]["Position"]["y"] -= 1
-                    await msg.edit(embed=discord.Embed(description=render(msg, user)))
+        if currentgame[str(user.id)]["jumped_frame"] == False: #gotta make sure
+            if not on_floor(interaction.message, interaction.user):
+                do = True
+                while do:
+                    if on_floor(interaction.message, interaction.user):
+                        do = False
+                    else:
+                        currentgame[str(user.id)]["Position"]["y"] -= 1
+                        await msg.edit(embed=discord.Embed(description=render(msg, user)))
 
 
 class Mine(discord.ui.Select):
@@ -647,6 +651,7 @@ async def on_message(message):
         freq = 150.0 * octaves
         currentgame[str(message.author.id)] = {
             "cangeneratemodels": True, #a simple solution for a problem that will need to be solved later
+            "jumped_frame":False,
             "held_item": "nothing",
             "seed": freq,
             "Position": {
