@@ -342,12 +342,16 @@ def gettile(tile):
         case "stone":return "<:s_:939809867902910524>"
         case "sky":return "<:b2:939815809117724703>"
         case "ironore":return "<:i1:960482977559748608>"
-        case "oaklog":return "<:wl1:960812648113504270>"
-        case "oakleaf":return "<:wl11:960812925340233758>"
+        case "coalore":return "<:c1:960483005422526474>"
+        case "copperore":return "<:c2:960483033272713237>"
+        case "oaklog":return "<:1w1:960812648113504270>"
+        case "oakplanks":return "<:1wp1:960812582975987732>"
+        case "oakleaf":return "<:1wl1:960812925340233758>"
         case "off_furnace":return "<:f1:962212558809477170>"
         case "on_furnace":return "<:f2:962212567550427176>"
         case "craftingtable":return "<:c3:962216007852757004>"
         case "stick":return "<:s1:962218518605074533>"
+        case _:return "<:m1:965953292674940999>" #missingno texture
         
 def savegame(message, user=0):
     if user == 0:
