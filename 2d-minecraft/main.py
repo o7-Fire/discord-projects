@@ -2,6 +2,7 @@ import nextcord as discord
 from perlin_noise import PerlinNoise
 from noise import pnoise2
 import random
+from PIL import Image
 import time
 import asyncio
 import math
@@ -88,12 +89,14 @@ class Movement(discord.ui.Select):
             currentgame[str(user.id)]["Position"]["x"] -= 5
             if not valid_movement(msg, user):
                 currentgame[str(user.id)]["Position"]["x"] += 5
-            await msg.edit(embed=discord.Embed(description=render(msg, user)))
+            embedtosend = await render_discord(msg, user)
+            await msg.edit(embed=embedtosend)
         elif option == "<":
             currentgame[str(user.id)]["Position"]["x"] -= 1
             if not valid_movement(msg, user):
                 currentgame[str(user.id)]["Position"]["x"] += 1
-            await msg.edit(embed=discord.Embed(description=render(msg, user)))
+            embedtosend = await render_discord(msg, user)
+            await msg.edit(embed=embedtosend)
         elif option == "^":
             if currentgame[str(user.id)]["jumped_frame"] == False:
                 currentgame[str(user.id)]["jumped_frame"] = True
@@ -102,22 +105,27 @@ class Movement(discord.ui.Select):
             currentgame[str(user.id)]["Position"]["y"] += 1
             if not valid_movement(msg, user):
                 currentgame[str(user.id)]["Position"]["y"] -= 1
-            await msg.edit(embed=discord.Embed(description=render(msg, user)))
+            await render_discord("send", msg, user)
+            embedtosend = await render_discord(msg, user)
+            await msg.edit(embed=embedtosend)
         elif option == "V":
             currentgame[str(user.id)]["Position"]["y"] -= 1
             if not valid_movement(msg, user):
                 currentgame[str(user.id)]["Position"]["y"] += 1
-            await msg.edit(embed=discord.Embed(description=render(msg, user)))
+            embedtosend = await render_discord(msg, user)
+            await msg.edit(embed=embedtosend)
         elif option == ">":
             currentgame[str(user.id)]["Position"]["x"] += 1
             if not valid_movement(msg, user):
                 currentgame[str(user.id)]["Position"]["x"] -= 1
-            await msg.edit(embed=discord.Embed(description=render(msg, user)))
+            embedtosend = await render_discord(msg, user)
+            await msg.edit(embed=embedtosend)
         elif option == ">>":
             currentgame[str(user.id)]["Position"]["x"] += 5
             if not valid_movement(msg, user):
                 currentgame[str(user.id)]["Position"]["x"] -= 5
-            await msg.edit(embed=discord.Embed(description=render(msg, user)))
+            embedtosend = await render_discord(msg, user)
+            await msg.edit(embed=embedtosend)
             
         if currentgame[str(user.id)]["jumped_frame"] == False: #gotta make sure
             if not on_floor(interaction.message, interaction.user):
@@ -127,7 +135,8 @@ class Movement(discord.ui.Select):
                         do = False
                     else:
                         currentgame[str(user.id)]["Position"]["y"] -= 1
-                        await msg.edit(embed=discord.Embed(description=render(msg, user)))
+                        embedtosend = await render_discord(msg, user)
+                        await msg.edit(embed=embedtosend)
 
 
 class Mine(discord.ui.Select):
@@ -172,7 +181,8 @@ class Mine(discord.ui.Select):
                             if block in block_index: extramessagetosay = f"Mined {str(amount)} {block_index[block]['name']}!"
                             else: extramessagetosay = f"Mined {str(amount)} {item_index[block]['name']}!"
                             add_item(user, block, amount)
-                await msg.edit(embed=discord.Embed(description=render(msg, user, extramessagetosay)))
+                embedtosend = await render_discord(msg, user, additionalmessage=extramessagetosay)
+                await msg.edit(embed=embedtosend)
         # handle options
         if option == "<^":
             await randomfunctionformining(-1, 0)
@@ -194,7 +204,8 @@ class Mine(discord.ui.Select):
                     do = False
                 else:
                     currentgame[str(user.id)]["Position"]["y"] -= 1
-                    await msg.edit(embed=discord.Embed(description=render(msg, user, extramessagetosay)))
+                    embedtosend = await render_discord(msg, user, additionalmessage=extramessagetosay)
+                    await msg.edit(embed=embedtosend)
 
 
 class Place(discord.ui.Select):
@@ -227,7 +238,8 @@ class Place(discord.ui.Select):
                 add_item(user, held_item, -1)
                 if int(currentgame[str(user.id)]["inventory"][held_item]) < 1:
                     currentgame[str(user.id)]["held_item"] = "nothing"
-            await msg.edit(embed=discord.Embed(description=render(msg, user)))
+            embedtosend = await render_discord(msg, user, additionalmessage=extramessagetosay)
+            await msg.edit(embed=embedtosend)
         
         # handle options
         if option == "<^":
@@ -334,24 +346,29 @@ class DropdownView(discord.ui.View):
         self.add_item(Mine())
         self.add_item(Place())
         self.add_item(Action())
+
+
+def image_grid(imgs, rows, cols):
+    assert len(imgs) == rows * cols
     
+    w, h = imgs[0].size
+    grid = Image.new('RGB', size=(cols * w, rows * h))
+    grid_w, grid_h = grid.size
+    
+    for i, img in enumerate(imgs):
+        grid.paste(img, box=(i % cols * w, i // cols * h))
+    return grid
+
 def gettile(tile):
-    match tile:
-        case "grassblock":return "<:g_:939809738852548628>"
-        case "dirt":return "<:d_:939809769462566983>"
-        case "stone":return "<:s_:939809867902910524>"
-        case "sky":return "<:b2:939815809117724703>"
-        case "ironore":return "<:i1:960482977559748608>"
-        case "coalore":return "<:c1:960483005422526474>"
-        case "copperore":return "<:c2:960483033272713237>"
-        case "oaklog":return "<:1w1:960812648113504270>"
-        case "oakplanks":return "<:1wp1:960812582975987732>"
-        case "oakleaf":return "<:1wl1:960812925340233758>"
-        case "off_furnace":return "<:f1:962212558809477170>"
-        case "on_furnace":return "<:f2:962212567550427176>"
-        case "craftingtable":return "<:c3:962216007852757004>"
-        case "stick":return "<:s1:962218518605074533>"
-        case _:return "<:m1:965953292674940999>" #missingno texture
+    if os.path.exists(f"./asset/image/{tile}.png"):
+        img = Image.open(f"./asset/image/{tile}.png")
+        return img.resize((16, 16))
+    elif os.path.exists(f"./asset/image/{tile}.jpg"):
+        img = Image.open(f"./asset/image/{tile}.png")
+        return img.resize((16, 16))
+    else:
+        img = Image.open(f"./asset/image/missingno.png")
+        return img.resize((16, 16))
         
 def savegame(message, user=0):
     if user == 0:
@@ -529,6 +546,18 @@ def render_inventory(message, user=0, additional_message=""):
     finalmessage = finalmessage.replace(", ", "", 1)
     return finalmessage
 
+async def render_discord(message, user, additionalmessage=""):
+    r = render(message, user, additional_message=additionalmessage)
+    secret_channel = client.get_channel(966580292032802837)
+    r[1].save(f"./temp/{user.id}.png")
+    file = discord.File(f"./temp/{user.id}.png")
+    temp_message = await secret_channel.send(file=file)
+    attachment = temp_message.attachments[0]
+    
+    embed = discord.Embed(description=r[0])
+    embed.set_image(url=attachment.url)
+    return embed
+    
 def generatechunks(message, user=0):
     if user == 0:
         user = message.author
@@ -599,12 +628,13 @@ def render(message, user=0, additional_message=""):
     
     playerpos = False #debug
     debugfinalmessage = "" #debug
-    for y in reversed(range(10)):
-        for x in range(11):
+    images = []
+    for y in reversed(range(21)):
+        for x in range(31):
             plrx = currentgame[str(user.id)]["Position"]["x"]
             plry = currentgame[str(user.id)]["Position"]["y"]
-            tx = plrx + x - 5
-            ty = plry + y - 4
+            tx = plrx + x - 15
+            ty = plry + y - 10
             #--- debug
             debugfinalmessage += f"({str(tx)}, {str(ty)}) "
             if playerpos == False:
@@ -613,18 +643,17 @@ def render(message, user=0, additional_message=""):
             tile = currentgame[str(user.id)]["gamechunks"][f"{str(tx)}X{str(ty)}"]
             do = True
             if plrx == tx and plry == ty:
-                finalmessage += "<:h1:939816513853063218>"
+                images.append(gettile("head"))
                 do = False
             elif plrx == tx and plry == ty + 1:
-                finalmessage += "<:b1:939816528277307412>"
+                images.append(gettile("body"))
                 do = False
                 
             if do:
-                finalmessage += gettile(tile)
-        finalmessage += "\n"
+                images.append(gettile(tile))
         debugfinalmessage += "\n"  # debug
     print(f"{debugfinalmessage}\n\n{playerpos}") #debug
-    return finalmessage
+    return [finalmessage, image_grid(images, rows=21, cols=31)]
 
 @client.event
 async def on_ready():
@@ -644,7 +673,6 @@ async def on_message(message):
         args = message.content.split(" ")
         currentgame[str(message.author.id)]["Position"]["x"] = int(args[1])
         currentgame[str(message.author.id)]["Position"]["y"] = int(args[2])
-        render(message)
         await message.channel.send("Done!")
     if message.content.startswith("additem "):
         args = message.content.split(" ")
@@ -684,11 +712,11 @@ async def on_message(message):
                     do = False
                 else:
                     currentgame[str(message.author.id)]["Position"]["y"] -= 1
-            embed = discord.Embed(description=render(message))
-            await message.channel.send(embed=embed, view=DropdownView())
+            embedtosend = await render_discord(message, message.author)
+            await message.channel.send(embed=embedtosend, view=DropdownView())
         else:
-            embed = discord.Embed(description=render(message))
-            await message.channel.send(embed=embed, view=DropdownView())
+            embedtosend = await render_discord(message, message.author)
+            await message.channel.send(embed=embedtosend, view=DropdownView())
             await message.channel.send("Game loaded successfully!")
             currentgame[str(message.author.id)]["cangeneratemodels"] = True
             
