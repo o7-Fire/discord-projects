@@ -1,12 +1,16 @@
 from PIL import Image
-import cv2
 import random
-import time
+import discord
+from discord import app_commands
 
-on = Image.open("on.png").resize((8,8))
-off = Image.open("off.png").resize((8,8))
+on = Image.open("on.png").resize((16,16))
+off = Image.open("off.png").resize((16,16))
 
-size = 100
+size = 50
+
+intents = discord.Intents.default()
+client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client)
 
 grid = {}
 
@@ -89,10 +93,37 @@ def render():
                 images.append(on)
     return image_grid(images, size, size)
 
-newgrid()
+async def render_discord():
+    secret_channel = client.get_channel(1204968667637358662)
+    file = discord.File("render.png")
+    temp_message = await secret_channel.send(file=file)
+    attachment = temp_message.attachments[0]
 
-while True:
+    embed = discord.Embed()
+    embed.set_image(url=attachment.url)
+    return embed
+
+@tree.command(
+    name="startgame",
+    description="start the game of life",
+    guild=discord.Object(id=839297157836308520)
+)
+
+async def first_command(interaction):
+    newgrid()
     rendered = render()
     rendered.save("render.png")
-    cv2.imshow("image", cv2.imread("render.png", cv2.IMREAD_COLOR))
-    cv2.waitKey(1)
+    embedtosend = await render_discord()
+    await interaction.response.send_message(embed=embedtosend)
+    while True:
+        rendered = render()
+        rendered.save("render.png")
+        embedtosend = await render_discord()
+        await interaction.edit_original_response(embed=embedtosend)
+
+@client.event
+async def on_ready():
+    await tree.sync(guild=discord.Object(id=839297157836308520))
+    print("Ready!")
+
+client.run("")
